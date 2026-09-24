@@ -473,3 +473,8 @@ button:disabled{opacity:.6;cursor:progress}
   .audit-card-head time{display:block;margin-top:8px}
   .audit-change{grid-template-columns:1fr}
 }
+
+
+.contact-preference-control select{margin-top:6px;width:100%;min-height:38px;border-radius:10px;border:1px solid #302c23;background:#090909;color:var(--text);padding:0 10px;outline:none}
+.contact-preference-control select:focus{border-color:color-mix(in srgb,var(--primary) 70%,#302c23)}
+.contact-preference-message{margin:6px 0 0;min-height:1em;font-size:.7rem}
