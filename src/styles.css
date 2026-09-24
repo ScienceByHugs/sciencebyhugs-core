@@ -692,3 +692,31 @@ button:disabled{opacity:.6;cursor:progress}
 .referral-row small{display:block;margin-top:3px;color:var(--muted)}
 @media(max-width:1050px){.referral-kpis{grid-template-columns:repeat(3,1fr)}.referral-row{grid-template-columns:repeat(2,minmax(0,1fr))}}
 @media(max-width:700px){.referral-kpis,.referral-milestones{grid-template-columns:1fr}.referral-row{grid-template-columns:1fr}}
+
+/* Admin tools */
+#admin-tools-root{display:grid;gap:16px}
+.admin-columns{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:16px}
+.admin-panel{padding:18px;border:1px solid #2d291f;border-radius:20px;background:rgba(0,0,0,.2)}
+.admin-note{margin:-4px 0 14px;color:var(--muted);font-size:.72rem;line-height:1.45}
+.admin-invite-list,.admin-template-list{display:grid;gap:8px}
+.admin-invite-row{display:grid;grid-template-columns:minmax(140px,1fr) minmax(180px,1.2fr) auto;gap:10px;align-items:center;padding:10px 0;border-bottom:1px solid #27241e;font-size:.74rem}
+.admin-invite-row:last-child{border-bottom:0}
+.admin-invite-row small{display:block;margin-top:3px;color:var(--muted)}
+.admin-invite-message{grid-column:1/-1;margin:0}
+.admin-template-card{border:1px solid #2c291f;border-radius:14px;background:rgba(0,0,0,.14);padding:0 12px}
+.admin-template-card summary{display:flex;justify-content:space-between;align-items:center;gap:12px;cursor:pointer;padding:12px 0;list-style:none}
+.admin-template-card summary::-webkit-details-marker{display:none}
+.admin-template-card summary strong,.admin-template-card summary small{display:block}
+.admin-template-card summary small{margin-top:3px;color:var(--muted)}
+.admin-template-card summary b{color:var(--secondary);font-size:.65rem}
+.admin-template-editor{padding:4px 0 14px}
+.admin-template-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px}
+.admin-template-grid label>span{display:block;color:var(--muted);font-size:.64rem;text-transform:uppercase;letter-spacing:.06em;margin-bottom:6px}
+.admin-template-grid input,.admin-template-grid textarea{width:100%;border:1px solid #302c23;border-radius:11px;background:#090909;color:var(--text);padding:10px 11px;outline:none;font:inherit}
+.admin-template-grid textarea{min-height:150px;resize:vertical}
+.admin-span-2{grid-column:span 2}
+.admin-template-active{display:flex;gap:8px;align-items:center;color:var(--muted);font-size:.72rem}
+.admin-template-actions{display:flex;align-items:center;justify-content:flex-end;gap:12px;margin-top:10px}
+.admin-template-actions .card-message{margin-right:auto}
+@media(max-width:900px){.admin-columns{grid-template-columns:1fr}}
+@media(max-width:700px){.admin-invite-row,.admin-template-grid{grid-template-columns:1fr}.admin-span-2{grid-column:span 1}}
