@@ -478,3 +478,10 @@ button:disabled{opacity:.6;cursor:progress}
 .contact-preference-control select{margin-top:6px;width:100%;min-height:38px;border-radius:10px;border:1px solid #302c23;background:#090909;color:var(--text);padding:0 10px;outline:none}
 .contact-preference-control select:focus{border-color:color-mix(in srgb,var(--primary) 70%,#302c23)}
 .contact-preference-message{margin:6px 0 0;min-height:1em;font-size:.7rem}
+
+
+.membership-control{min-width:190px}
+.membership-control label>span{display:block;color:var(--muted);font-size:.62rem;text-transform:uppercase;letter-spacing:.06em;margin-bottom:5px}
+.membership-control select{width:100%;min-height:36px;border-radius:10px;border:1px solid #302c23;background:#090909;color:var(--text);padding:0 10px;outline:none}
+.membership-control select:focus{border-color:color-mix(in srgb,var(--primary) 70%,#302c23)}
+.membership-message{margin:6px 0 0;min-height:1em;font-size:.68rem;max-width:240px}
