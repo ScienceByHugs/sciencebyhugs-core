@@ -797,14 +797,26 @@ async function renderAudit(email: string) {
 }
 
 async function render() {
-  const { data: { user } } = await supabase.auth.getUser()
+  try {
+    const { data: { session }, error: sessionError } = await supabase.auth.getSession()
 
-  if (!user) {
-    renderLogin()
-    return
-  }
+    if (sessionError) throw sessionError
 
-  const role = roleFor(user)
+    if (!session?.user) {
+      renderLogin()
+      return
+    }
+
+    const { data: { user }, error: userError } = await supabase.auth.getUser()
+
+    if (userError) throw userError
+
+    if (!user) {
+      renderLogin('Your session could not be verified. Please sign in again.')
+      return
+    }
+
+    const role = roleFor(user)
   if (!isAdminRole(role)) {
     renderForbidden(user.email || 'Signed-in account')
     return
@@ -861,7 +873,15 @@ async function render() {
     return
   }
 
-  await renderExecutiveDashboard(email)
+    await renderExecutiveDashboard(email)
+  } catch (error) {
+    console.error('Core startup failed', error)
+    renderLogin(
+      error instanceof Error
+        ? 'Core could not verify your session: ' + error.message
+        : 'Core could not verify your session. Please sign in again.',
+    )
+  }
 }
 
 supabase.auth.onAuthStateChange((event) => {
@@ -872,4 +892,7 @@ supabase.auth.onAuthStateChange((event) => {
 
 window.addEventListener('hashchange', () => void render())
 
+// Always paint a usable screen immediately. Fresh sessions should never wait on
+// a remote auth request before the login UI appears.
+renderLogin()
 void render()
