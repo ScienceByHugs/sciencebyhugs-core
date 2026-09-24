@@ -1,4 +1,4 @@
-import { loadCoreCustomers, updateCustomerAccountStatus, updateCustomerContactPreference, updateCustomerMembership, updateCustomerNotes, updateCustomerProfile, type CoreCustomer, type CoreMembership } from './services/customers'
+import { loadCoreCustomers, updateCustomerAccountStatus, updateCustomerContactPreference, updateCustomerEmail, updateCustomerMembership, updateCustomerNotes, updateCustomerProfile, type CoreCustomer, type CoreMembership } from './services/customers'
 
 type Helpers = {
   escapeHtml: (value: unknown) => string
@@ -65,7 +65,11 @@ function customerCard(customer: CoreCustomer, memberships: CoreMembership[], hel
         '<label><span>First name</span><input class="profile-first-name" maxlength="80" value="' + escapeHtml(customer.first_name || '') + '"></label>' +
         '<label><span>Last name</span><input class="profile-last-name" maxlength="80" value="' + escapeHtml(customer.last_name || '') + '"></label>' +
         '<label><span>Phone</span><input class="profile-phone" maxlength="40" value="' + escapeHtml(customer.phone || '') + '"></label>' +
-        '<label><span>Email</span><input value="' + escapeHtml(customer.email) + '" disabled title="Login email is managed through Supabase Auth"></label>' +
+        '<label class="profile-email-field"><span>Email / login</span><div class="profile-email-row">' +
+          '<input class="profile-email" type="email" maxlength="254" value="' + escapeHtml(customer.email) + '">' +
+          '<button class="secondary save-customer-email" type="button">Change Email</button>' +
+        '</div><small>Updates Supabase Auth and the customer profile together.</small>' +
+        '<p class="card-message customer-email-message" aria-live="polite"></p></label>' +
         '<label class="profile-span-2"><span>Address line 1</span><input class="profile-address-1" maxlength="160" value="' + escapeHtml(customer.address_line_1 || '') + '"></label>' +
         '<label class="profile-span-2"><span>Address line 2</span><input class="profile-address-2" maxlength="160" value="' + escapeHtml(customer.address_line_2 || '') + '"></label>' +
         '<label><span>City</span><input class="profile-city" maxlength="100" value="' + escapeHtml(customer.city || '') + '"></label>' +
@@ -244,6 +248,60 @@ export async function bindCustomersPage(helpers: Helpers) {
           if (message) message.textContent = error instanceof Error ? error.message : 'Could not update membership.'
         } finally {
           select.disabled = false
+        }
+      })
+    })
+
+    document.querySelectorAll<HTMLButtonElement>('.save-customer-email').forEach(button => {
+      button.addEventListener('click', async () => {
+        const card = button.closest<HTMLElement>('.customer-card')
+        const customerId = card?.dataset.customerId
+        const input = card?.querySelector<HTMLInputElement>('.profile-email')
+        const message = card?.querySelector<HTMLParagraphElement>('.customer-email-message')
+        if (!customerId || !input) return
+
+        const customer = customers.find(item => item.id === customerId)
+        if (!customer) return
+
+        const nextEmail = input.value.trim().toLowerCase()
+        const previousEmail = customer.email
+
+        if (!nextEmail || nextEmail === previousEmail.toLowerCase()) {
+          input.value = previousEmail
+          if (message) message.textContent = nextEmail ? 'No email change to save.' : 'Enter an email address.'
+          return
+        }
+
+        const confirmed = window.confirm(
+          'Change the login email for ' + nameFor(customer) + '?\n\n' +
+          'Current: ' + previousEmail + '\nNew: ' + nextEmail + '\n\n' +
+          'This updates both Supabase Auth and the customer profile and is recorded in the Audit Log.'
+        )
+
+        if (!confirmed) {
+          input.value = previousEmail
+          return
+        }
+
+        button.disabled = true
+        input.disabled = true
+        button.textContent = 'Changing…'
+        if (message) message.textContent = 'Synchronizing Auth and profile email…'
+
+        try {
+          const updated = await updateCustomerEmail(customerId, nextEmail)
+          customer.email = updated.email
+          customer.updated_at = updated.updated_at
+          input.value = updated.email
+          if (message) message.textContent = 'Email changed. Auth, profile, and Audit are synchronized.'
+          apply()
+        } catch (error) {
+          input.value = previousEmail
+          if (message) message.textContent = error instanceof Error ? error.message : 'Could not change email.'
+        } finally {
+          button.disabled = false
+          input.disabled = false
+          button.textContent = 'Change Email'
         }
       })
     })
