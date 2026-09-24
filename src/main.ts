@@ -302,11 +302,16 @@ function invoiceCard(invoice: CoreInvoice) {
     `)
     .join('')
 
+  const fulfillmentLabel =
+    invoice.order?.status && ['ordered', 'shipped', 'delivered', 'delayed', 'cancelled'].includes(invoice.order.status)
+      ? invoice.order.status.replaceAll('_', ' ')
+      : 'Paid · Processing'
+
   const statusText =
     awaiting
       ? 'Awaiting Approval'
       : paid
-        ? 'Paid · Processing'
+        ? fulfillmentLabel
         : sent
           ? 'Invoice Sent'
           : ready
