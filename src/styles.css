@@ -152,3 +152,58 @@ button:disabled{opacity:.6;cursor:progress}
   .payment-notes-field{grid-column:auto}
   .payment-data{grid-template-columns:1fr}
 }
+
+
+/* Core fulfillment control */
+.fulfillment-panel{
+  margin-top:16px;
+  padding:18px;
+  border:1px solid #302c23;
+  border-radius:18px;
+  background:rgba(8,8,8,.58);
+}
+.fulfillment-panel.terminal{
+  border-color:color-mix(in srgb,var(--success) 30%,transparent);
+}
+.fulfillment-badge{
+  border:1px solid #3a3427;
+  border-radius:999px;
+  padding:7px 10px;
+  color:var(--secondary);
+  font-size:.67rem;
+  font-weight:900;
+  letter-spacing:.08em;
+}
+.fulfillment-badge.shipped,
+.fulfillment-badge.delivered{
+  color:var(--success);
+  border-color:color-mix(in srgb,var(--success) 45%,transparent);
+}
+.fulfillment-badge.delayed{
+  color:#f0b96a;
+  border-color:color-mix(in srgb,#f0b96a 45%,transparent);
+}
+.fulfillment-badge.cancelled{
+  color:#e18a8a;
+  border-color:color-mix(in srgb,#e18a8a 45%,transparent);
+}
+.fulfillment-controls{
+  display:grid;
+  grid-template-columns:220px minmax(220px,1fr) auto;
+  gap:10px;
+  align-items:end;
+  margin-top:15px;
+}
+.fulfillment-controls select,
+.fulfillment-controls input{
+  min-height:42px;
+  border-radius:12px;
+  border:1px solid #302c23;
+  background:#090909;
+  color:var(--text);
+  padding:0 12px;
+  outline:none;
+}
+@media(max-width:900px){
+  .fulfillment-controls{grid-template-columns:1fr}
+}
