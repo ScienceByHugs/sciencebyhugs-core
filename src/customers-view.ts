@@ -1,4 +1,4 @@
-import { listCoreCustomers, updateCustomerNotes, type CoreCustomer } from './services/customers'
+import { listCoreCustomers, updateCustomerContactPreference, updateCustomerNotes, type CoreCustomer } from './services/customers'
 
 type Helpers = {
   escapeHtml: (value: unknown) => string
@@ -30,7 +30,15 @@ function customerCard(customer: CoreCustomer, helpers: Helpers) {
       '<div><span>Rewards</span><strong>' + customer.metrics.available_reward_count + '</strong></div>' +
     '</div>' +
     '<div class="customer-details">' +
-      '<div><span>Preferred contact</span><strong>' + escapeHtml(customer.preferred_contact_method || '—') + '</strong></div>' +
+      '<div class="contact-preference-control"><span>Preferred contact</span>' +
+        '<select class="customer-contact-preference" aria-label="Preferred contact method">' +
+          '<option value=""' + (!customer.preferred_contact_method ? ' selected' : '') + '>Not set</option>' +
+          '<option value="email"' + (customer.preferred_contact_method?.toLowerCase() === 'email' ? ' selected' : '') + '>Email</option>' +
+          '<option value="phone"' + (customer.preferred_contact_method?.toLowerCase() === 'phone' ? ' selected' : '') + '>Phone</option>' +
+          '<option value="text"' + (['text','sms'].includes(customer.preferred_contact_method?.toLowerCase() || '') ? ' selected' : '') + '>Text</option>' +
+        '</select>' +
+        '<p class="card-message contact-preference-message" aria-live="polite"></p>' +
+      '</div>' +
       '<div><span>Last login</span><strong>' + escapeHtml(dateTime(customer.last_login_at)) + '</strong></div>' +
       '<div><span>Latest order</span><strong>' + escapeHtml(dateTime(customer.metrics.latest_order_at)) + '</strong></div>' +
       '<div><span>Referral code</span><strong>' + escapeHtml(customer.referral_code || '—') + '</strong></div>' +
@@ -141,6 +149,35 @@ export async function bindCustomersPage(helpers: Helpers) {
         } finally {
           button.disabled = false
           button.textContent = 'Save Notes'
+        }
+      })
+    })
+
+    document.querySelectorAll<HTMLSelectElement>('.customer-contact-preference').forEach(select => {
+      select.addEventListener('change', async () => {
+        const card = select.closest<HTMLElement>('.customer-card')
+        const customerId = card?.dataset.customerId
+        const message = card?.querySelector<HTMLParagraphElement>('.contact-preference-message')
+
+        if (!customerId) return
+        const customer = customers.find(item => item.id === customerId)
+        if (!customer) return
+
+        const previous = customer.preferred_contact_method || ''
+        const next = select.value || null
+        select.disabled = true
+        if (message) message.textContent = 'Saving audited preference…'
+
+        try {
+          const updated = await updateCustomerContactPreference(customerId, next)
+          customer.preferred_contact_method = updated.preferred_contact_method
+          customer.updated_at = updated.updated_at
+          if (message) message.textContent = 'Saved. Audit event recorded.'
+        } catch (error) {
+          select.value = previous.toLowerCase() === 'sms' ? 'text' : previous.toLowerCase()
+          if (message) message.textContent = error instanceof Error ? error.message : 'Could not save preference.'
+        } finally {
+          select.disabled = false
         }
       })
     })
