@@ -3,6 +3,7 @@ import { supabase } from './services/supabase'
 import { bindOrdersPage, ordersPageMarkup } from './orders-view'
 import { bindCustomersPage, customersPageMarkup } from './customers-view'
 import { bindCatalogPage, catalogPageMarkup } from './catalog-view'
+import { bindDashboardPage, dashboardPageMarkup } from './dashboard-view'
 import {
   approveInvoice,
   listCoreInvoices,
@@ -41,9 +42,10 @@ const isAdminRole = (role: string) =>
   role === 'owner' || role === 'admin'
 
 function shell(content: string, signedIn = false) {
-  const activeView = location.hash === '#orders' ? 'orders' : location.hash === '#customers' ? 'customers' : location.hash === '#catalog' ? 'catalog' : 'operations'
+  const activeView = location.hash === '#operations' ? 'operations' : location.hash === '#orders' ? 'orders' : location.hash === '#customers' ? 'customers' : location.hash === '#catalog' ? 'catalog' : 'dashboard'
   const navigation = signedIn
     ? '<nav class="core-nav" aria-label="Core navigation">' +
+      '<a href="#dashboard" class="' + (activeView === 'dashboard' ? 'active' : '') + '">Dashboard</a>' +
       '<a href="#operations" class="' + (activeView === 'operations' ? 'active' : '') + '">Operations</a>' +
       '<a href="#orders" class="' + (activeView === 'orders' ? 'active' : '') + '">Orders</a>' +
       '<a href="#customers" class="' + (activeView === 'customers' ? 'active' : '') + '">Customers</a>' +
@@ -391,7 +393,7 @@ function invoiceCard(invoice: CoreInvoice) {
   `
 }
 
-async function renderDashboard(email: string) {
+async function renderOperations(email: string) {
   shell(`
     <section class="dashboard-head">
       <div>
@@ -578,7 +580,7 @@ async function renderDashboard(email: string) {
 
         try {
           await approveInvoice(invoiceId)
-          await renderDashboard(email)
+          await renderOperations(email)
         } catch (error) {
           if (message) message.textContent = error instanceof Error ? error.message : 'Approval failed'
           button.disabled = false
@@ -608,7 +610,7 @@ async function renderDashboard(email: string) {
 
         try {
           await sendInvoice(invoiceId)
-          await renderDashboard(email)
+          await renderOperations(email)
         } catch (error) {
           if (message) message.textContent = error instanceof Error ? error.message : 'Send failed'
           button.disabled = false
@@ -640,7 +642,7 @@ async function renderDashboard(email: string) {
 
         try {
           await recordPayment(orderId, provider, reference, notes)
-          await renderDashboard(email)
+          await renderOperations(email)
         } catch (error) {
           if (message) message.textContent = error instanceof Error ? error.message : 'Payment recording failed'
           button.disabled = false
@@ -669,7 +671,7 @@ async function renderDashboard(email: string) {
 
         try {
           await verifyPayment(orderId)
-          await renderDashboard(email)
+          await renderOperations(email)
         } catch (error) {
           if (message) message.textContent = error instanceof Error ? error.message : 'Payment verification failed'
           button.disabled = false
@@ -710,7 +712,7 @@ async function renderDashboard(email: string) {
             status as 'ordered' | 'shipped' | 'delivered' | 'delayed' | 'cancelled' | 'processing',
             note,
           )
-          await renderDashboard(email)
+          await renderOperations(email)
         } catch (error) {
           if (message) message.textContent = error instanceof Error ? error.message : 'Fulfillment update failed'
           button.disabled = false
@@ -746,6 +748,11 @@ async function renderCatalog(email: string) {
   await bindCatalogPage({ escapeHtml, money, dateTime })
 }
 
+async function renderExecutiveDashboard(email: string) {
+  shell(dashboardPageMarkup(email, escapeHtml), true)
+  await bindDashboardPage({ escapeHtml, money, dateTime })
+}
+
 async function render() {
   const { data: { user } } = await supabase.auth.getUser()
 
@@ -761,6 +768,11 @@ async function render() {
   }
 
   const email = user.email || 'Core operator'
+  if (location.hash === '#operations') {
+    await renderOperations(email)
+    return
+  }
+
   if (location.hash === '#orders') {
     await renderOrders(email)
     return
@@ -776,7 +788,7 @@ async function render() {
     return
   }
 
-  await renderDashboard(email)
+  await renderExecutiveDashboard(email)
 }
 
 supabase.auth.onAuthStateChange((event) => {
