@@ -778,3 +778,21 @@ button:disabled{cursor:not-allowed;opacity:.58}
 @media(prefers-reduced-motion:reduce){
   *,*::before,*::after{scroll-behavior:auto!important;animation-duration:.001ms!important;animation-iteration-count:1!important;transition-duration:.001ms!important}
 }
+
+/* V1 polish: final interaction refinements */
+@media(min-width:761px){
+  .commandbar{
+    margin-top:-14px;
+    padding-top:14px;
+    background:linear-gradient(to bottom,rgba(5,5,5,.96),rgba(5,5,5,.88) 78%,rgba(5,5,5,0));
+  }
+}
+@media(pointer:coarse){
+  button,.button,.core-nav a,.queue-tab{min-height:44px}
+  input,select,textarea{font-size:16px}
+}
+@media(max-width:520px){
+  .dashboard-title{font-size:clamp(2.25rem,14vw,3.7rem)}
+  .invoice-card,.analytics-panel,.finance-panel,.referral-panel,.admin-panel,.notification-panel,.audit-card,.catalog-ops-panel,.catalog-queue-panel{border-radius:16px}
+  .loading,.empty-state{padding:30px 18px}
+}
