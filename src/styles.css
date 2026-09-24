@@ -492,3 +492,17 @@ button:disabled{opacity:.6;cursor:progress}
 .account-status-control select{width:100%;min-height:36px;border-radius:10px;border:1px solid #302c23;background:#090909;color:var(--text);padding:0 10px;outline:none}
 .account-status-control select:focus{border-color:color-mix(in srgb,var(--primary) 70%,#302c23)}
 .account-status-message{margin:6px 0 0;min-height:1em;font-size:.68rem;max-width:220px}
+
+
+.customer-profile-editor{margin-top:18px;padding-top:16px;border-top:1px solid #26231e}
+.customer-profile-editor summary{cursor:pointer;color:var(--secondary);font-weight:800;font-size:.78rem;list-style:none}
+.customer-profile-editor summary::-webkit-details-marker{display:none}
+.customer-profile-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px;margin-top:14px}
+.customer-profile-grid label>span{display:block;color:var(--muted);font-size:.64rem;text-transform:uppercase;letter-spacing:.06em;margin-bottom:6px}
+.customer-profile-grid input{width:100%;min-height:40px;border:1px solid #302c23;border-radius:11px;background:#090909;color:var(--text);padding:0 11px;outline:none}
+.customer-profile-grid input:focus{border-color:color-mix(in srgb,var(--primary) 70%,#302c23)}
+.customer-profile-grid input:disabled{opacity:.6;cursor:not-allowed}
+.profile-span-2{grid-column:span 2}
+.customer-profile-actions{display:flex;justify-content:flex-end;align-items:center;gap:12px;margin-top:12px}
+.customer-profile-actions .card-message{margin:0 auto 0 0;min-height:1em}
+@media(max-width:760px){.customer-profile-grid{grid-template-columns:1fr}.profile-span-2{grid-column:span 1}}
