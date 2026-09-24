@@ -58,12 +58,19 @@ export function catalogPageMarkup(email: string, escapeHtml: Helpers['escapeHtml
     '<p class="copy">Operational visibility into product status, category, storefront state, sourcing, COA coverage, and catalog sync health.</p>' +
     '</div><div class="operator">Signed in as <strong>' + escapeHtml(email) + '</strong></div></section>' +
     '<section class="catalog-metrics" id="catalog-metrics"></section>' +
+    '<section class="catalog-ops-grid">' +
+      '<div class="catalog-ops-panel" id="catalog-feed-health"></div>' +
+      '<div class="catalog-ops-panel" id="catalog-metadata-health"></div>' +
+    '</section>' +
+    '<section class="catalog-queue-panel" id="catalog-action-queue"></section>' +
+    '<section class="catalog-queue-panel" id="catalog-discrepancies"></section>' +
     '<section class="catalog-toolbar"><label class="queue-search"><span class="sr-only">Search catalog</span>' +
     '<input id="catalog-search" type="search" placeholder="Search product, type, code, category…" autocomplete="off"></label>' +
     '<select id="catalog-category" aria-label="Filter catalog by category"><option value="all">All categories</option></select>' +
     '<select id="catalog-state" aria-label="Filter catalog by state">' +
       '<option value="all">All states</option><option value="active">Active</option><option value="inactive">Inactive</option>' +
-      '<option value="coa-missing">Missing COA</option><option value="uncategorized">Uncategorized</option>' +
+      '<option value="metadata-incomplete">Metadata incomplete</option><option value="coa-missing">Missing COA</option>' +
+      '<option value="vendor-discrepancy">Vendor discrepancy</option><option value="uncategorized">Uncategorized</option>' +
     '</select></section>' +
     '<p class="queue-summary" id="catalog-summary" aria-live="polite"></p>' +
     '<section class="catalog-sync" id="catalog-sync"></section>' +
@@ -76,7 +83,7 @@ export async function bindCatalogPage(helpers: Helpers) {
 
   try {
     const payload = await loadCoreCatalog()
-    const { products, categories, metrics, sync_runs: syncRuns } = payload
+    const { products, categories, metrics, operations, sync_runs: syncRuns } = payload
 
     const metricEl = document.querySelector<HTMLDivElement>('#catalog-metrics')
     if (metricEl) {
@@ -84,20 +91,113 @@ export async function bindCatalogPage(helpers: Helpers) {
         '<div><span>Total</span><strong>' + metrics.total + '</strong></div>' +
         '<div><span>Active</span><strong>' + metrics.active + '</strong></div>' +
         '<div><span>Available</span><strong>' + metrics.available + '</strong></div>' +
-        '<div><span>COA coverage</span><strong>' + metrics.with_coa + '/' + metrics.total + '</strong></div>' +
-        '<div><span>Uncategorized</span><strong>' + metrics.missing_category + '</strong></div>'
+        '<div><span>Metadata complete</span><strong>' + metrics.metadata_complete + '/' + metrics.active + '</strong></div>' +
+        '<div><span>Completeness</span><strong>' + metrics.metadata_completeness_percent + '%</strong></div>' +
+        '<div><span>Work queue</span><strong>' + metrics.action_queue + '</strong></div>' +
+        '<div><span>Vendor exceptions</span><strong>' + metrics.discrepancy_count + '</strong></div>'
+    }
+
+    const feedEl = document.querySelector<HTMLDivElement>('#catalog-feed-health')
+    if (feedEl) {
+      const feed = operations.feed
+      feedEl.classList.toggle('attention', feed.stale)
+      feedEl.innerHTML =
+        '<div class="catalog-ops-head"><div><span class="eyebrow">VENDOR FEED</span>' +
+        '<h2>' + (feed.stale ? 'Needs attention' : 'Healthy') + '</h2></div>' +
+        '<span class="catalog-health-pill ' + (feed.stale ? 'attention' : 'healthy') + '">' +
+        (feed.stale ? 'STALE' : 'LIVE') + '</span></div>' +
+        '<p>Latest sync: <strong>' + helpers.escapeHtml(helpers.dateTime(feed.latest_sync_at)) + '</strong></p>' +
+        '<div class="catalog-ops-stats">' +
+          '<span>Age <strong>' + (feed.age_minutes ?? '—') + ' min</strong></span>' +
+          '<span>Received <strong>' + (feed.latest_received_count ?? '—') + '</strong></span>' +
+          '<span>Upserted <strong>' + (feed.latest_upserted_count ?? '—') + '</strong></span>' +
+          '<span>Recent success <strong>' + feed.recent_successful_runs + '/' + feed.recent_run_count + '</strong></span>' +
+        '</div>' +
+        '<small>Vendor feed remains the source of truth. Core flags it stale after ' +
+        feed.stale_after_minutes + ' minutes without a successful refresh.</small>'
+    }
+
+    const metadataEl = document.querySelector<HTMLDivElement>('#catalog-metadata-health')
+    if (metadataEl) {
+      const missing = operations.metadata.missing
+      metadataEl.innerHTML =
+        '<div class="catalog-ops-head"><div><span class="eyebrow">CORE METADATA</span>' +
+        '<h2>' + operations.metadata.completeness_percent + '% complete</h2></div>' +
+        '<span class="catalog-health-pill">' + operations.metadata.complete_products + '/' +
+        operations.metadata.active_products + ' COMPLETE</span></div>' +
+        '<div class="catalog-missing-grid">' +
+          '<button type="button" data-ops-filter="coa-missing"><span>COA</span><strong>' + (missing.coa_url ?? 0) + '</strong></button>' +
+          '<button type="button" data-ops-filter="metadata-incomplete"><span>Product code</span><strong>' + (missing.product_code ?? 0) + '</strong></button>' +
+          '<button type="button" data-ops-filter="metadata-incomplete"><span>Research name</span><strong>' + (missing.research_name ?? 0) + '</strong></button>' +
+          '<button type="button" data-ops-filter="metadata-incomplete"><span>Purity</span><strong>' + (missing.purity ?? 0) + '</strong></button>' +
+          '<button type="button" data-ops-filter="metadata-incomplete"><span>Quantity</span><strong>' + (missing.quantity ?? 0) + '</strong></button>' +
+          '<button type="button" data-ops-filter="metadata-incomplete"><span>Lot</span><strong>' + (missing.lot_number ?? 0) + '</strong></button>' +
+        '</div>'
+    }
+
+    const queueEl = document.querySelector<HTMLDivElement>('#catalog-action-queue')
+    if (queueEl) {
+      const rows = operations.action_queue.slice(0, 12)
+      queueEl.innerHTML =
+        '<div class="catalog-queue-head"><div><span class="eyebrow">ACTION QUEUE</span>' +
+        '<h2>Core metadata work</h2><p>Vendor-safe fields that can be completed in Core.</p></div>' +
+        '<strong>' + operations.action_queue.length + ' products</strong></div>' +
+        (rows.length
+          ? '<div class="catalog-queue-list">' + rows.map(item =>
+              '<button type="button" class="catalog-queue-row jump-to-product" data-product-id="' +
+              helpers.escapeHtml(item.product_id) + '">' +
+                '<span><strong>' + helpers.escapeHtml(item.name) + '</strong><small>' +
+                helpers.escapeHtml(item.category_name || 'No vendor category') + '</small></span>' +
+                '<span class="catalog-missing-chips">' +
+                  item.missing_fields.map(field => '<i>' + helpers.escapeHtml(field.label) + '</i>').join('') +
+                '</span>' +
+                '<b>' + item.missing_count + '</b>' +
+              '</button>'
+            ).join('') + '</div>' +
+            (operations.action_queue.length > rows.length
+              ? '<p class="catalog-queue-more">Showing the first ' + rows.length +
+                '. Use “Metadata incomplete” to view the full queue.</p>' : '')
+          : '<div class="empty-state compact"><strong>Metadata queue clear.</strong></div>')
+    }
+
+    const discrepancyEl = document.querySelector<HTMLDivElement>('#catalog-discrepancies')
+    if (discrepancyEl) {
+      const rows = operations.discrepancies.slice(0, 10)
+      discrepancyEl.classList.toggle('has-items', rows.length > 0)
+      discrepancyEl.innerHTML =
+        '<div class="catalog-queue-head"><div><span class="eyebrow">VENDOR EXCEPTIONS</span>' +
+        '<h2>Feed discrepancies</h2><p>Investigate these without overriding vendor-owned fields.</p></div>' +
+        '<strong>' + operations.discrepancies.length + ' exceptions</strong></div>' +
+        (rows.length
+          ? '<div class="catalog-queue-list">' + rows.map(item =>
+              '<button type="button" class="catalog-queue-row jump-to-product" data-product-id="' +
+              helpers.escapeHtml(item.product_id) + '">' +
+                '<span><strong>' + helpers.escapeHtml(item.name) + '</strong><small>' +
+                helpers.escapeHtml(item.category_name || 'No vendor category') + '</small></span>' +
+                '<span class="catalog-issue-copy">' + helpers.escapeHtml(item.issues.join(' · ')) + '</span>' +
+                '<b>!</b>' +
+              '</button>'
+            ).join('') + '</div>'
+          : '<div class="empty-state compact"><strong>No vendor-feed discrepancies detected.</strong></div>')
     }
 
     const syncEl = document.querySelector<HTMLDivElement>('#catalog-sync')
-    const latestSync = syncRuns[0]
-    if (syncEl && latestSync) {
-      syncEl.innerHTML = '<div><span class="eyebrow">LATEST CATALOG SYNC</span>' +
-        '<strong>' + helpers.escapeHtml(latestSync.status) + '</strong>' +
-        '<p>' + (latestSync.received_count ?? 0) + ' received · ' +
-        (latestSync.upserted_count ?? 0) + ' upserted · ' +
-        (latestSync.deactivated_count ?? 0) + ' deactivated · ' +
-        helpers.escapeHtml(helpers.dateTime(latestSync.completed_at || latestSync.started_at)) + '</p>' +
-        (latestSync.error_message ? '<p class="form-message">' + helpers.escapeHtml(latestSync.error_message) + '</p>' : '') +
+    if (syncEl) {
+      const rows = syncRuns.slice(0, 6)
+      syncEl.innerHTML =
+        '<div><span class="eyebrow">SYNC HISTORY</span><strong>Vendor catalog refreshes</strong>' +
+        '<p>Read-only history from the vendor-backed Google catalog sync.</p>' +
+        (rows.length
+          ? '<div class="catalog-sync-history">' + rows.map(run =>
+              '<div class="catalog-sync-row">' +
+                '<strong class="' + (run.status.toLowerCase() === 'completed' ? 'success' : 'failure') + '">' +
+                  helpers.escapeHtml(run.status) + '</strong>' +
+                '<span>' + helpers.escapeHtml(helpers.dateTime(run.completed_at || run.started_at)) + '</span>' +
+                '<span>' + (run.received_count ?? 0) + ' received · ' + (run.upserted_count ?? 0) + ' upserted</span>' +
+                '<span>' + (run.deactivated_count ?? 0) + ' deactivated</span>' +
+              '</div>'
+            ).join('') + '</div>'
+          : '<div class="empty-state compact"><strong>No sync history yet.</strong></div>') +
         '</div>'
     }
 
@@ -115,6 +215,8 @@ export async function bindCatalogPage(helpers: Helpers) {
     let search = ''
     let category = 'all'
     let state = 'all'
+    const metadataQueueIds = new Set(operations.action_queue.map(item => item.product_id))
+    const discrepancyIds = new Set(operations.discrepancies.map(item => item.product_id))
 
     const apply = () => {
       let shown = 0
@@ -132,7 +234,9 @@ export async function bindCatalogPage(helpers: Helpers) {
           state === 'all' ||
           (state === 'active' && product.active) ||
           (state === 'inactive' && !product.active) ||
+          (state === 'metadata-incomplete' && metadataQueueIds.has(product.id)) ||
           (state === 'coa-missing' && !product.coa_url) ||
+          (state === 'vendor-discrepancy' && discrepancyIds.has(product.id)) ||
           (state === 'uncategorized' && !product.category_id)
         const visible = categoryMatch && stateMatch && (!search || haystack.includes(search))
         card.hidden = !visible
@@ -183,14 +287,50 @@ export async function bindCatalogPage(helpers: Helpers) {
           const eyebrow = card.querySelector<HTMLElement>('.catalog-card-head .eyebrow')
           if (eyebrow) eyebrow.textContent = identifier
 
-          if (message) message.textContent = 'Saved. Audit event recorded.'
-          apply()
+          if (message) message.textContent = 'Saved. Audit event recorded. Refreshing operations…'
+          await bindCatalogPage(helpers)
         } catch (error) {
           if (message) message.textContent = error instanceof Error ? error.message : 'Could not save metadata.'
         } finally {
           button.disabled = false
           button.textContent = 'Save Metadata'
         }
+      })
+    })
+
+    document.querySelectorAll<HTMLButtonElement>('[data-ops-filter]').forEach(button => {
+      button.addEventListener('click', () => {
+        state = button.dataset.opsFilter || 'all'
+        const stateSelect = document.querySelector<HTMLSelectElement>('#catalog-state')
+        if (stateSelect) stateSelect.value = state
+        apply()
+        document.querySelector('#catalog-list')?.scrollIntoView({ behavior: 'smooth', block: 'start' })
+      })
+    })
+
+    document.querySelectorAll<HTMLButtonElement>('.jump-to-product').forEach(button => {
+      button.addEventListener('click', () => {
+        const productId = button.dataset.productId
+        if (!productId) return
+
+        search = ''
+        category = 'all'
+        state = 'all'
+        const searchInput = document.querySelector<HTMLInputElement>('#catalog-search')
+        const categoryInput = document.querySelector<HTMLSelectElement>('#catalog-category')
+        const stateInput = document.querySelector<HTMLSelectElement>('#catalog-state')
+        if (searchInput) searchInput.value = ''
+        if (categoryInput) categoryInput.value = 'all'
+        if (stateInput) stateInput.value = 'all'
+        apply()
+
+        const card = document.querySelector<HTMLElement>('.catalog-card[data-product-id="' + productId + '"]')
+        if (!card) return
+        const editor = card.querySelector<HTMLDetailsElement>('.catalog-editor')
+        if (editor) editor.open = true
+        card.scrollIntoView({ behavior: 'smooth', block: 'center' })
+        card.classList.add('catalog-card-focus')
+        window.setTimeout(() => card.classList.remove('catalog-card-focus'), 1800)
       })
     })
 
