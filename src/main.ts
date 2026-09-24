@@ -11,8 +11,9 @@ import {
   type CoreInvoice,
 } from './services/invoices'
 
-const app = document.querySelector<HTMLDivElement>('#app')
-if (!app) throw new Error('App root not found')
+const appRoot = document.querySelector<HTMLDivElement>('#app')
+if (!appRoot) throw new Error('App root not found')
+const app = appRoot
 
 const money = (value: number | string | null | undefined) =>
   new Intl.NumberFormat('en-US', {
@@ -81,11 +82,12 @@ function renderLogin(message = '') {
 
   document.querySelector<HTMLFormElement>('#login-form')?.addEventListener('submit', async (event) => {
     event.preventDefault()
-    const form = new FormData(event.currentTarget)
+    const formElement = event.currentTarget
+    const form = new FormData(formElement)
     const email = String(form.get('email') || '').trim()
     const password = String(form.get('password') || '')
     const messageEl = document.querySelector<HTMLParagraphElement>('#login-message')
-    const button = event.currentTarget.querySelector<HTMLButtonElement>('button[type="submit"]')
+    const button = formElement.querySelector<HTMLButtonElement>('button[type="submit"]')
 
     if (messageEl) messageEl.textContent = 'Authenticating…'
     if (button) button.disabled = true
