@@ -517,3 +517,17 @@ button:disabled{opacity:.6;cursor:progress}
   .profile-email-row{grid-template-columns:1fr}
   .profile-email-row .secondary{width:100%}
 }
+
+
+.catalog-editor{margin-top:16px;padding-top:14px;border-top:1px solid #26231e}
+.catalog-editor summary{cursor:pointer;color:var(--secondary);font-weight:800;font-size:.78rem;list-style:none}
+.catalog-editor summary::-webkit-details-marker{display:none}
+.catalog-editor-note{margin:10px 0 0;color:var(--muted);font-size:.72rem;line-height:1.45}
+.catalog-editor-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px;margin-top:14px}
+.catalog-editor-grid label>span{display:block;color:var(--muted);font-size:.64rem;text-transform:uppercase;letter-spacing:.06em;margin-bottom:6px}
+.catalog-editor-grid input{width:100%;min-height:40px;border:1px solid #302c23;border-radius:11px;background:#090909;color:var(--text);padding:0 11px;outline:none}
+.catalog-editor-grid input:focus{border-color:color-mix(in srgb,var(--primary) 70%,#302c23)}
+.catalog-span-2{grid-column:span 2}
+.catalog-editor-actions{display:flex;justify-content:flex-end;align-items:center;gap:12px;margin-top:12px}
+.catalog-editor-actions .card-message{margin:0 auto 0 0;min-height:1em}
+@media(max-width:760px){.catalog-editor-grid{grid-template-columns:1fr}.catalog-span-2{grid-column:span 1}}
