@@ -36,8 +36,8 @@ function productCard(product: CoreCatalogProduct, helpers: Helpers) {
     (product.coa_url
       ? '<div class="invoice-actions"><a class="button secondary" href="' + escapeHtml(product.coa_url) + '" target="_blank" rel="noreferrer">Open COA</a></div>'
       : '') +
-    '<details class="catalog-editor"><summary>Edit persistent metadata</summary>' +
-      '<p class="catalog-editor-note">Category, name, price, storefront status, and sourcing are Google-sync managed and read-only here.</p>' +
+    '<details class="catalog-editor"><summary>Edit Core metadata overlay</summary>' +
+      '<p class="catalog-editor-note">Vendor-synced fields stay read-only. These Core metadata fields are separate and persist across vendor catalog syncs.</p>' +
       '<div class="catalog-editor-grid">' +
         '<label><span>Product code</span><input class="catalog-product-code" maxlength="120" value="' + escapeHtml(product.product_code || '') + '"></label>' +
         '<label><span>Research name</span><input class="catalog-research-name" maxlength="200" value="' + escapeHtml(product.research_name || '') + '"></label>' +
