@@ -33,7 +33,6 @@ function shell(content: string, signedIn = false) {
     </main>`
   document.querySelector('#sign-out')?.addEventListener('click', async () => {
     await supabase.auth.signOut()
-    await render()
   })
 }
 
@@ -68,7 +67,6 @@ function renderLogin(message = '') {
       if (button) button.disabled = false
       return
     }
-    await render()
   })
 }
 
@@ -227,5 +225,10 @@ async function render() {
   await renderDashboard(user.email || 'Core operator')
 }
 
-supabase.auth.onAuthStateChange(() => { void render() })
+supabase.auth.onAuthStateChange((event) => {
+  if (event === 'SIGNED_IN' || event === 'SIGNED_OUT' || event === 'USER_UPDATED') {
+    void render()
+  }
+})
+
 void render()
