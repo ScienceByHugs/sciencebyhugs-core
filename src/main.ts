@@ -1,5 +1,6 @@
 import './styles.css'
 import { supabase } from './services/supabase'
+import { bindOrdersPage, ordersPageMarkup } from './orders-view'
 import {
   approveInvoice,
   listCoreInvoices,
@@ -37,6 +38,7 @@ const isAdminRole = (role: string) =>
   role === 'owner' || role === 'admin'
 
 function shell(content: string, signedIn = false) {
+  const activeView = location.hash === '#orders' ? 'orders' : 'operations'
   app.innerHTML = `
     <main class="shell">
       <header class="commandbar">
@@ -45,6 +47,7 @@ function shell(content: string, signedIn = false) {
           <strong>CORE</strong>
         </div>
         <div class="command-actions">
+          ${signedIn ? '<nav class="core-nav" aria-label="Core navigation"><a href="#operations" class="' + (activeView === 'operations' ? 'active' : '') + '">Operations</a><a href="#orders" class="' + (activeView === 'orders' ? 'active' : '') + '">Orders</a></nav>' : ''}
           <span class="status">SYSTEM READY</span>
           ${signedIn ? '<button class="ghost compact" id="sign-out">Sign out</button>' : ''}
         </div>
@@ -715,6 +718,11 @@ async function renderDashboard(email: string) {
   }
 }
 
+async function renderOrders(email: string) {
+  shell(ordersPageMarkup(email, escapeHtml), true)
+  await bindOrdersPage({ escapeHtml, money, dateTime })
+}
+
 async function render() {
   const { data: { user } } = await supabase.auth.getUser()
 
@@ -729,7 +737,13 @@ async function render() {
     return
   }
 
-  await renderDashboard(user.email || 'Core operator')
+  const email = user.email || 'Core operator'
+  if (location.hash === '#orders') {
+    await renderOrders(email)
+    return
+  }
+
+  await renderDashboard(email)
 }
 
 supabase.auth.onAuthStateChange((event) => {
@@ -737,5 +751,7 @@ supabase.auth.onAuthStateChange((event) => {
     void render()
   }
 })
+
+window.addEventListener('hashchange', () => void render())
 
 void render()
