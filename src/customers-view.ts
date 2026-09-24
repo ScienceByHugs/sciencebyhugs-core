@@ -1,4 +1,4 @@
-import { loadCoreCustomers, updateCustomerAccountStatus, updateCustomerContactPreference, updateCustomerMembership, updateCustomerNotes, type CoreCustomer, type CoreMembership } from './services/customers'
+import { loadCoreCustomers, updateCustomerAccountStatus, updateCustomerContactPreference, updateCustomerMembership, updateCustomerNotes, updateCustomerProfile, type CoreCustomer, type CoreMembership } from './services/customers'
 
 type Helpers = {
   escapeHtml: (value: unknown) => string
@@ -60,6 +60,21 @@ function customerCard(customer: CoreCustomer, memberships: CoreMembership[], hel
             escapeHtml(order.status) + '</span><strong>' + money(order.total) + '</strong></a>'
         ).join('') + '</div>'
       : '') +
+    '<details class="customer-profile-editor"><summary>Edit customer profile</summary>' +
+      '<div class="customer-profile-grid">' +
+        '<label><span>First name</span><input class="profile-first-name" maxlength="80" value="' + escapeHtml(customer.first_name || '') + '"></label>' +
+        '<label><span>Last name</span><input class="profile-last-name" maxlength="80" value="' + escapeHtml(customer.last_name || '') + '"></label>' +
+        '<label><span>Phone</span><input class="profile-phone" maxlength="40" value="' + escapeHtml(customer.phone || '') + '"></label>' +
+        '<label><span>Email</span><input value="' + escapeHtml(customer.email) + '" disabled title="Login email is managed through Supabase Auth"></label>' +
+        '<label class="profile-span-2"><span>Address line 1</span><input class="profile-address-1" maxlength="160" value="' + escapeHtml(customer.address_line_1 || '') + '"></label>' +
+        '<label class="profile-span-2"><span>Address line 2</span><input class="profile-address-2" maxlength="160" value="' + escapeHtml(customer.address_line_2 || '') + '"></label>' +
+        '<label><span>City</span><input class="profile-city" maxlength="100" value="' + escapeHtml(customer.city || '') + '"></label>' +
+        '<label><span>State</span><input class="profile-state" maxlength="80" value="' + escapeHtml(customer.state || '') + '"></label>' +
+        '<label><span>Postal code</span><input class="profile-postal-code" maxlength="30" value="' + escapeHtml(customer.postal_code || '') + '"></label>' +
+      '</div>' +
+      '<div class="customer-profile-actions"><p class="card-message customer-profile-message" aria-live="polite"></p>' +
+      '<button class="secondary save-customer-profile" type="button">Save Profile</button></div>' +
+    '</details>' +
     '<div class="customer-notes-editor">' +
       '<label><span>Internal notes</span><textarea class="customer-notes-input" maxlength="2000" placeholder="Add internal customer context…">' +
         escapeHtml(customer.notes || '') +
@@ -229,6 +244,56 @@ export async function bindCustomersPage(helpers: Helpers) {
           if (message) message.textContent = error instanceof Error ? error.message : 'Could not update membership.'
         } finally {
           select.disabled = false
+        }
+      })
+    })
+
+    document.querySelectorAll<HTMLButtonElement>('.save-customer-profile').forEach(button => {
+      button.addEventListener('click', async () => {
+        const card = button.closest<HTMLElement>('.customer-card')
+        const customerId = card?.dataset.customerId
+        const message = card?.querySelector<HTMLParagraphElement>('.customer-profile-message')
+        if (!customerId) return
+
+        const customer = customers.find(item => item.id === customerId)
+        if (!customer) return
+
+        const value = (selector: string) =>
+          card?.querySelector<HTMLInputElement>(selector)?.value.trim() || ''
+
+        const payload = {
+          firstName: value('.profile-first-name'),
+          lastName: value('.profile-last-name'),
+          phone: value('.profile-phone'),
+          addressLine1: value('.profile-address-1'),
+          addressLine2: value('.profile-address-2'),
+          city: value('.profile-city'),
+          state: value('.profile-state'),
+          postalCode: value('.profile-postal-code'),
+        }
+
+        button.disabled = true
+        button.textContent = 'Saving…'
+        if (message) message.textContent = 'Saving audited profile update…'
+
+        try {
+          const updated = await updateCustomerProfile(customerId, payload)
+          customer.first_name = updated.first_name
+          customer.last_name = updated.last_name
+          customer.phone = updated.phone
+          customer.address_line_1 = updated.address_line_1
+          customer.address_line_2 = updated.address_line_2
+          customer.city = updated.city
+          customer.state = updated.state
+          customer.postal_code = updated.postal_code
+          customer.updated_at = updated.updated_at
+          if (message) message.textContent = 'Saved. Audit event recorded.'
+          apply()
+        } catch (error) {
+          if (message) message.textContent = error instanceof Error ? error.message : 'Could not update profile.'
+        } finally {
+          button.disabled = false
+          button.textContent = 'Save Profile'
         }
       })
     })
