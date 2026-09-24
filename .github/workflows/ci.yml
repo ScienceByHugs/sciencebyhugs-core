@@ -6,25 +6,35 @@ on:
   push:
     branches: [main]
 
+permissions:
+  contents: write
+
 jobs:
   build:
     runs-on: ubuntu-latest
     steps:
-      - name: Checkout
+      - name: Checkout feature branch
         uses: actions/checkout@v4
+        with:
+          ref: core-security-hardening-v1
       - name: Setup Node
         uses: actions/setup-node@v4
         with:
           node-version: 22
       - name: Generate lockfile
         run: npm install --package-lock-only --ignore-scripts --no-audit --no-fund
+      - name: Commit generated lockfile
+        run: |
+          if git diff --quiet -- package-lock.json && git ls-files --error-unmatch package-lock.json >/dev/null 2>&1; then
+            echo "Lockfile already committed."
+          else
+            git config user.name "github-actions[bot]"
+            git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+            git add package-lock.json
+            git commit -m "Commit reproducible package lock"
+            git push origin HEAD:core-security-hardening-v1
+          fi
       - name: Install locked dependencies
         run: npm ci --ignore-scripts --no-audit --no-fund
       - name: Build
         run: npm run build
-      - name: Export lockfile
-        uses: actions/upload-artifact@v4
-        with:
-          name: core-package-lock
-          path: package-lock.json
-          if-no-files-found: error
