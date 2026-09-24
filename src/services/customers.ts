@@ -162,3 +162,32 @@ export async function updateCustomerAccountStatus(customerId: string, accountSta
   if (!data?.success) throw new Error(data?.error || 'Could not update account status')
   return data.customer as Pick<CoreCustomer, 'id' | 'customer_number' | 'account_status' | 'updated_at'>
 }
+
+
+export type CustomerProfileUpdate = {
+  firstName: string
+  lastName: string
+  phone: string
+  addressLine1: string
+  addressLine2: string
+  city: string
+  state: string
+  postalCode: string
+}
+
+export async function updateCustomerProfile(customerId: string, profile: CustomerProfileUpdate) {
+  const { data, error } = await supabase.functions.invoke('core-customer-control', {
+    body: {
+      action: 'update_profile',
+      customerId,
+      ...profile,
+    },
+  })
+  if (error) throw error
+  if (!data?.success) throw new Error(data?.error || 'Could not update customer profile')
+  return data.customer as Pick<
+    CoreCustomer,
+    'id' | 'customer_number' | 'first_name' | 'last_name' | 'phone' |
+    'address_line_1' | 'address_line_2' | 'city' | 'state' | 'postal_code' | 'updated_at'
+  >
+}
