@@ -1,4 +1,4 @@
-import { listCoreCustomers, updateCustomerContactPreference, updateCustomerNotes, type CoreCustomer } from './services/customers'
+import { loadCoreCustomers, updateCustomerContactPreference, updateCustomerMembership, updateCustomerNotes, type CoreCustomer, type CoreMembership } from './services/customers'
 
 type Helpers = {
   escapeHtml: (value: unknown) => string
@@ -10,7 +10,7 @@ function nameFor(customer: CoreCustomer) {
   return [customer.first_name, customer.last_name].filter(Boolean).join(' ') || 'Customer'
 }
 
-function customerCard(customer: CoreCustomer, helpers: Helpers) {
+function customerCard(customer: CoreCustomer, memberships: CoreMembership[], helpers: Helpers) {
   const { escapeHtml, money, dateTime } = helpers
   const recentOrders = customer.orders.slice(0, 3)
   return '<article class="customer-card" data-customer-id="' + escapeHtml(customer.id) + '">' +
@@ -19,7 +19,13 @@ function customerCard(customer: CoreCustomer, helpers: Helpers) {
       '<h2>' + escapeHtml(nameFor(customer)) + '</h2>' +
       '<p>' + escapeHtml(customer.email) + (customer.phone ? ' · ' + escapeHtml(customer.phone) : '') + '</p></div>' +
       '<div class="customer-tags">' +
-        '<span class="membership-pill">' + escapeHtml(customer.membership?.name || 'No membership') + '</span>' +
+        '<div class="membership-control"><label><span>Membership</span><select class="customer-membership-select">' +
+          memberships.map(membership =>
+            '<option value="' + escapeHtml(membership.id) + '"' +
+              (customer.membership?.id === membership.id ? ' selected' : '') + '>' +
+              escapeHtml(membership.name) + '</option>'
+          ).join('') +
+        '</select></label><p class="card-message membership-message" aria-live="polite"></p></div>' +
         '<span class="account-pill">' + escapeHtml(customer.account_status) + '</span>' +
       '</div>' +
     '</div>' +
@@ -78,16 +84,16 @@ export async function bindCustomersPage(helpers: Helpers) {
   if (!list) return
 
   try {
-    const customers = await listCoreCustomers()
+    const { customers, memberships } = await loadCoreCustomers()
     list.innerHTML = customers.length
-      ? customers.map(customer => customerCard(customer, helpers)).join('')
+      ? customers.map(customer => customerCard(customer, memberships, helpers)).join('')
       : '<div class="empty-state"><h2>No customers yet.</h2><p>Customer profiles will appear here.</p></div>'
 
     const membershipSelect = document.querySelector<HTMLSelectElement>('#customers-membership')
-    const memberships = [...new Map(customers.filter(c => c.membership).map(c => [c.membership!.slug, c.membership!.name])).entries()]
     if (membershipSelect) {
-      membershipSelect.insertAdjacentHTML('beforeend', memberships.map(([slug, name]) =>
-        '<option value="' + helpers.escapeHtml(slug) + '">' + helpers.escapeHtml(name) + '</option>'
+      membershipSelect.insertAdjacentHTML('beforeend', memberships.map(membership =>
+        '<option value="' + helpers.escapeHtml(membership.slug) + '">' +
+          helpers.escapeHtml(membership.name) + '</option>'
       ).join(''))
     }
 
@@ -176,6 +182,48 @@ export async function bindCustomersPage(helpers: Helpers) {
         } catch (error) {
           select.value = previous.toLowerCase() === 'sms' ? 'text' : previous.toLowerCase()
           if (message) message.textContent = error instanceof Error ? error.message : 'Could not save preference.'
+        } finally {
+          select.disabled = false
+        }
+      })
+    })
+
+    document.querySelectorAll<HTMLSelectElement>('.customer-membership-select').forEach(select => {
+      select.addEventListener('change', async () => {
+        const card = select.closest<HTMLElement>('.customer-card')
+        const customerId = card?.dataset.customerId
+        const message = card?.querySelector<HTMLParagraphElement>('.membership-message')
+        if (!customerId) return
+
+        const customer = customers.find(item => item.id === customerId)
+        const nextMembership = memberships.find(item => item.id === select.value)
+        if (!customer || !nextMembership) return
+
+        const previousMembership = customer.membership
+        const confirmed = window.confirm(
+          'Change ' + nameFor(customer) + ' from ' +
+          (previousMembership?.name || 'No membership') + ' to ' +
+          nextMembership.name + '?\n\n' +
+          'This change is audited. Customers with 20 qualified referrals may be automatically upgraded to Principal Scientist again by the referral system.'
+        )
+
+        if (!confirmed) {
+          select.value = previousMembership?.id || ''
+          return
+        }
+
+        select.disabled = true
+        if (message) message.textContent = 'Saving audited membership change…'
+
+        try {
+          const updated = await updateCustomerMembership(customerId, nextMembership.id)
+          customer.membership = updated.membership
+          customer.updated_at = updated.customer.updated_at
+          if (message) message.textContent = 'Saved. Audit event recorded.'
+          apply()
+        } catch (error) {
+          select.value = previousMembership?.id || ''
+          if (message) message.textContent = error instanceof Error ? error.message : 'Could not update membership.'
         } finally {
           select.disabled = false
         }
