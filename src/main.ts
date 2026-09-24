@@ -7,6 +7,7 @@ import { bindDashboardPage, dashboardPageMarkup } from './dashboard-view'
 import { bindAuditPage, auditPageMarkup } from './audit-view'
 import { bindAnalyticsPage, analyticsPageMarkup } from './analytics-view'
 import { bindFinancePage, financePageMarkup } from './finance-view'
+import { bindReferralsPage, referralsPageMarkup } from './referrals-view'
 import {
   approveInvoice,
   listCoreInvoices,
@@ -45,7 +46,7 @@ const isAdminRole = (role: string) =>
   role === 'owner' || role === 'admin'
 
 function shell(content: string, signedIn = false) {
-  const activeView = location.hash === '#operations' ? 'operations' : location.hash === '#orders' ? 'orders' : location.hash === '#customers' ? 'customers' : location.hash === '#catalog' ? 'catalog' : location.hash === '#analytics' ? 'analytics' : location.hash === '#finance' ? 'finance' : location.hash === '#audit' ? 'audit' : 'dashboard'
+  const activeView = location.hash === '#operations' ? 'operations' : location.hash === '#orders' ? 'orders' : location.hash === '#customers' ? 'customers' : location.hash === '#catalog' ? 'catalog' : location.hash === '#analytics' ? 'analytics' : location.hash === '#finance' ? 'finance' : location.hash === '#referrals' ? 'referrals' : location.hash === '#audit' ? 'audit' : 'dashboard'
   const navigation = signedIn
     ? '<nav class="core-nav" aria-label="Core navigation">' +
       '<a href="#dashboard" class="' + (activeView === 'dashboard' ? 'active' : '') + '">Dashboard</a>' +
@@ -55,6 +56,7 @@ function shell(content: string, signedIn = false) {
       '<a href="#catalog" class="' + (activeView === 'catalog' ? 'active' : '') + '">Catalog</a>' +
       '<a href="#analytics" class="' + (activeView === 'analytics' ? 'active' : '') + '">Analytics</a>' +
       '<a href="#finance" class="' + (activeView === 'finance' ? 'active' : '') + '">Finance</a>' +
+      '<a href="#referrals" class="' + (activeView === 'referrals' ? 'active' : '') + '">Referrals</a>' +
       '<a href="#audit" class="' + (activeView === 'audit' ? 'active' : '') + '">Audit</a>' +
       '</nav>'
     : ''
@@ -769,6 +771,11 @@ async function renderFinance(email: string) {
   await bindFinancePage({ escapeHtml, money, dateTime })
 }
 
+async function renderReferrals(email: string) {
+  shell(referralsPageMarkup(email, escapeHtml), true)
+  await bindReferralsPage({ escapeHtml, dateTime })
+}
+
 async function renderAudit(email: string) {
   shell(auditPageMarkup(email, escapeHtml), true)
   await bindAuditPage({ escapeHtml, dateTime })
@@ -816,6 +823,11 @@ async function render() {
 
   if (location.hash === '#finance') {
     await renderFinance(email)
+    return
+  }
+
+  if (location.hash === '#referrals') {
+    await renderReferrals(email)
     return
   }
 
