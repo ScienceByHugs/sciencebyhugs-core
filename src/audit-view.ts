@@ -65,7 +65,23 @@ export async function bindAuditPage(helpers: Helpers) {
                       '</p></div><div><span>After</span><p>' +
                       helpers.escapeHtml(String(event.after_data?.account_status || '—')) +
                       '</p></div></div>'
-                    : '') +
+                    : event.action === 'customer.profile.update'
+                      ? '<div class="audit-change"><div><span>Before</span><p>' +
+                        helpers.escapeHtml([
+                          event.before_data?.first_name, event.before_data?.last_name,
+                          event.before_data?.phone, event.before_data?.address_line_1,
+                          event.before_data?.address_line_2, event.before_data?.city,
+                          event.before_data?.state, event.before_data?.postal_code
+                        ].filter(Boolean).join(' · ') || '—') +
+                        '</p></div><div><span>After</span><p>' +
+                        helpers.escapeHtml([
+                          event.after_data?.first_name, event.after_data?.last_name,
+                          event.after_data?.phone, event.after_data?.address_line_1,
+                          event.after_data?.address_line_2, event.after_data?.city,
+                          event.after_data?.state, event.after_data?.postal_code
+                        ].filter(Boolean).join(' · ') || '—') +
+                        '</p></div></div>'
+                      : '') +
           '</article>'
         }).join('')
       : '<div class="empty-state"><h2>No controlled changes yet.</h2><p>New audited actions will appear here.</p></div>'
