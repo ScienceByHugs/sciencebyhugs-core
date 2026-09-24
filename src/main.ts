@@ -50,22 +50,23 @@ const isAdminRole = (role: string) =>
 function shell(content: string, signedIn = false) {
   const activeView = location.hash === '#operations' ? 'operations' : location.hash === '#orders' ? 'orders' : location.hash === '#customers' ? 'customers' : location.hash === '#catalog' ? 'catalog' : location.hash === '#analytics' ? 'analytics' : location.hash === '#finance' ? 'finance' : location.hash === '#referrals' ? 'referrals' : location.hash === '#admin-tools' ? 'admin-tools' : location.hash === '#notifications' ? 'notifications' : location.hash === '#audit' ? 'audit' : 'dashboard'
   const navigation = signedIn
-    ? '<nav class="core-nav" aria-label="Core navigation">' +
-      '<a href="#dashboard" class="' + (activeView === 'dashboard' ? 'active' : '') + '">Dashboard</a>' +
-      '<a href="#operations" class="' + (activeView === 'operations' ? 'active' : '') + '">Operations</a>' +
-      '<a href="#orders" class="' + (activeView === 'orders' ? 'active' : '') + '">Orders</a>' +
-      '<a href="#customers" class="' + (activeView === 'customers' ? 'active' : '') + '">Customers</a>' +
-      '<a href="#catalog" class="' + (activeView === 'catalog' ? 'active' : '') + '">Catalog</a>' +
-      '<a href="#analytics" class="' + (activeView === 'analytics' ? 'active' : '') + '">Analytics</a>' +
-      '<a href="#finance" class="' + (activeView === 'finance' ? 'active' : '') + '">Finance</a>' +
-      '<a href="#referrals" class="' + (activeView === 'referrals' ? 'active' : '') + '">Referrals</a>' +
-      '<a href="#admin-tools" class="' + (activeView === 'admin-tools' ? 'active' : '') + '">Admin</a>' +
-      '<a href="#notifications" class="' + (activeView === 'notifications' ? 'active' : '') + '">Alerts</a>' +
-      '<a href="#audit" class="' + (activeView === 'audit' ? 'active' : '') + '">Audit</a>' +
+    ? '<nav class="core-nav" aria-label="Core navigation" tabindex="0">' +
+      '<a href="#dashboard" class="' + (activeView === 'dashboard' ? 'active' : '') + '"' + (activeView === 'dashboard' ? ' aria-current="page"' : '') + '>Dashboard</a>' +
+      '<a href="#operations" class="' + (activeView === 'operations' ? 'active' : '') + '"' + (activeView === 'operations' ? ' aria-current="page"' : '') + '>Operations</a>' +
+      '<a href="#orders" class="' + (activeView === 'orders' ? 'active' : '') + '"' + (activeView === 'orders' ? ' aria-current="page"' : '') + '>Orders</a>' +
+      '<a href="#customers" class="' + (activeView === 'customers' ? 'active' : '') + '"' + (activeView === 'customers' ? ' aria-current="page"' : '') + '>Customers</a>' +
+      '<a href="#catalog" class="' + (activeView === 'catalog' ? 'active' : '') + '"' + (activeView === 'catalog' ? ' aria-current="page"' : '') + '>Catalog</a>' +
+      '<a href="#analytics" class="' + (activeView === 'analytics' ? 'active' : '') + '"' + (activeView === 'analytics' ? ' aria-current="page"' : '') + '>Analytics</a>' +
+      '<a href="#finance" class="' + (activeView === 'finance' ? 'active' : '') + '"' + (activeView === 'finance' ? ' aria-current="page"' : '') + '>Finance</a>' +
+      '<a href="#referrals" class="' + (activeView === 'referrals' ? 'active' : '') + '"' + (activeView === 'referrals' ? ' aria-current="page"' : '') + '>Referrals</a>' +
+      '<a href="#admin-tools" class="' + (activeView === 'admin-tools' ? 'active' : '') + '"' + (activeView === 'admin-tools' ? ' aria-current="page"' : '') + '>Admin</a>' +
+      '<a href="#notifications" class="' + (activeView === 'notifications' ? 'active' : '') + '"' + (activeView === 'notifications' ? ' aria-current="page"' : '') + '>Alerts</a>' +
+      '<a href="#audit" class="' + (activeView === 'audit' ? 'active' : '') + '"' + (activeView === 'audit' ? ' aria-current="page"' : '') + '>Audit</a>' +
       '</nav>'
     : ''
 
   app.innerHTML = `
+    <a class="skip-link" href="#core-content">Skip to content</a>
     <main class="shell">
       <header class="commandbar">
         <div>
@@ -78,7 +79,7 @@ function shell(content: string, signedIn = false) {
           ${signedIn ? '<button class="ghost compact" id="sign-out">Sign out</button>' : ''}
         </div>
       </header>
-      ${content}
+      <div id="core-content" tabindex="-1">${content}</div>
     </main>
   `
 
