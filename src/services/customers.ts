@@ -86,3 +86,18 @@ export async function listCoreCustomers(): Promise<CoreCustomer[]> {
   if (!data?.success) throw new Error(data?.error || 'Could not load customers')
   return data.customers || []
 }
+
+
+export async function updateCustomerNotes(customerId: string, notes: string) {
+  const { data, error } = await supabase.functions.invoke('core-customer-control', {
+    body: {
+      action: 'update_notes',
+      customerId,
+      notes,
+    },
+  })
+
+  if (error) throw error
+  if (!data?.success) throw new Error(data?.error || 'Could not update customer notes')
+  return data.customer as Pick<CoreCustomer, 'id' | 'customer_number' | 'notes' | 'updated_at'>
+}
