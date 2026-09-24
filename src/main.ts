@@ -6,6 +6,7 @@ import {
   recordPayment,
   sendInvoice,
   verifyPayment,
+  updateFulfillment,
   type CoreInvoice,
 } from './services/invoices'
 
@@ -209,6 +210,73 @@ function paymentPanel(invoice: CoreInvoice) {
   `
 }
 
+function fulfillmentPanel(invoice: CoreInvoice) {
+  if (!invoice.order_id || invoice.order?.payment_status !== 'paid') return ''
+
+  const status = invoice.order?.status || 'processing'
+  const timestamp =
+    status === 'ordered' ? invoice.order?.ordered_at :
+    status === 'shipped' ? invoice.order?.shipped_at :
+    status === 'delivered' ? invoice.order?.delivered_at :
+    status === 'delayed' ? invoice.order?.delayed_at :
+    status === 'cancelled' ? invoice.order?.cancelled_at :
+    invoice.order?.paid_at
+
+  const options: Record<string, Array<{ value: string; label: string }>> = {
+    processing: [
+      { value: 'ordered', label: 'Mark Ordered' },
+      { value: 'delayed', label: 'Mark Delayed' },
+      { value: 'cancelled', label: 'Cancel Order' },
+    ],
+    ordered: [
+      { value: 'shipped', label: 'Mark Shipped' },
+      { value: 'delayed', label: 'Mark Delayed' },
+      { value: 'cancelled', label: 'Cancel Order' },
+    ],
+    shipped: [
+      { value: 'delivered', label: 'Mark Delivered' },
+      { value: 'delayed', label: 'Mark Delayed' },
+    ],
+    delayed: [
+      { value: 'processing', label: 'Return to Processing' },
+      { value: 'ordered', label: 'Return to Ordered' },
+      { value: 'shipped', label: 'Return to Shipped' },
+      { value: 'cancelled', label: 'Cancel Order' },
+    ],
+  }
+
+  const terminal = status === 'delivered' || status === 'cancelled'
+  const actionOptions = options[status] || []
+
+  return `
+    <section class="fulfillment-panel ${terminal ? 'terminal' : ''}">
+      <div class="payment-panel-head">
+        <div>
+          <span class="eyebrow">FULFILLMENT CONTROL</span>
+          <h3>${escapeHtml(status.replaceAll('_', ' '))}</h3>
+        </div>
+        <span class="fulfillment-badge ${escapeHtml(status)}">${escapeHtml(status.toUpperCase())}</span>
+      </div>
+      <p class="payment-note">
+        Current stage${timestamp ? ` since <strong>${escapeHtml(dateTime(timestamp))}</strong>` : ''}.
+        ${terminal ? 'This order is in a final fulfillment state.' : 'Choose the next operational state below.'}
+      </p>
+      ${!terminal ? `
+        <div class="fulfillment-controls">
+          <select class="fulfillment-status">
+            <option value="">Choose next status</option>
+            ${actionOptions.map(option => `<option value="${option.value}">${option.label}</option>`).join('')}
+          </select>
+          <input class="fulfillment-note" type="text" maxlength="300" placeholder="Optional internal note">
+          <button class="secondary fulfillment-button" type="button" data-order-id="${escapeHtml(invoice.order_id)}">
+            Update Fulfillment
+          </button>
+        </div>
+      ` : ''}
+    </section>
+  `
+}
+
 function invoiceCard(invoice: CoreInvoice) {
   const awaiting = invoice.status === 'awaiting_approval'
   const sent = invoice.status === 'sent' || invoice.send_status === 'sent'
@@ -283,6 +351,7 @@ function invoiceCard(invoice: CoreInvoice) {
       ` : ''}
 
       ${paymentPanel(invoice)}
+      ${fulfillmentPanel(invoice)}
 
       <div class="invoice-actions">
         ${invoice.google_sheet_url ? `<a class="button secondary" href="${escapeHtml(invoice.google_sheet_url)}" target="_blank" rel="noreferrer">Open Sheet</a>` : ''}
@@ -453,7 +522,49 @@ async function renderDashboard(email: string) {
         try {
           await verifyPayment(orderId)
           await renderDashboard(email)
+      
+    document.querySelectorAll<HTMLButtonElement>('.fulfillment-button').forEach(button => {
+      button.addEventListener('click', async () => {
+        const orderId = button.dataset.orderId
+        const panel = button.closest<HTMLElement>('.fulfillment-panel')
+        const status = panel?.querySelector<HTMLSelectElement>('.fulfillment-status')?.value || ''
+        const note = panel?.querySelector<HTMLInputElement>('.fulfillment-note')?.value.trim() || ''
+        const message = button.closest<HTMLElement>('.invoice-card')
+          ?.querySelector<HTMLParagraphElement>('.card-message')
+
+        if (!orderId || !status) {
+          if (message) message.textContent = 'Choose the next fulfillment status.'
+          return
+        }
+
+        const highImpact = status === 'delivered' || status === 'cancelled'
+        if (highImpact) {
+          const confirmed = window.confirm(
+            `Move this order to ${status.toUpperCase()}?\n\nThis is a major fulfillment status change.`
+          )
+          if (!confirmed) return
+        }
+
+        button.disabled = true
+        button.textContent = 'Updating…'
+        if (message) message.textContent = `Updating order to ${status}…`
+
+        try {
+          await updateFulfillment(
+            orderId,
+            status as 'ordered' | 'shipped' | 'delivered' | 'delayed' | 'cancelled' | 'processing',
+            note,
+          )
+          await renderDashboard(email)
         } catch (error) {
+          if (message) message.textContent = error instanceof Error ? error.message : 'Fulfillment update failed'
+          button.disabled = false
+          button.textContent = 'Update Fulfillment'
+        }
+      })
+    })
+
+  } catch (error) {
           if (message) message.textContent = error instanceof Error ? error.message : 'Payment verification failed'
           button.disabled = false
           button.textContent = 'Verify Payment & Start Processing'
