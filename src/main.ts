@@ -47,8 +47,72 @@ const roleFor = (user: any) =>
 const isAdminRole = (role: string) =>
   role === 'owner' || role === 'admin'
 
+type CoreView =
+  | 'dashboard'
+  | 'operations'
+  | 'orders'
+  | 'customers'
+  | 'catalog'
+  | 'analytics'
+  | 'finance'
+  | 'referrals'
+  | 'admin-tools'
+  | 'notifications'
+  | 'audit'
+
+const CORE_VIEWS: CoreView[] = [
+  'dashboard',
+  'operations',
+  'orders',
+  'customers',
+  'catalog',
+  'analytics',
+  'finance',
+  'referrals',
+  'admin-tools',
+  'notifications',
+  'audit',
+]
+
+const LAST_CORE_VIEW_KEY = 'sciencebyhugs-core:last-view'
+
+function viewFromHash(hash = location.hash): CoreView | null {
+  const value = hash.replace(/^#/, '') as CoreView
+  return CORE_VIEWS.includes(value) ? value : null
+}
+
+function rememberCoreView(view: CoreView) {
+  try {
+    sessionStorage.setItem(LAST_CORE_VIEW_KEY, view)
+  } catch {
+    // Storage can be unavailable in hardened/private browser modes.
+  }
+}
+
+function resolveCoreView(): CoreView {
+  const explicitView = viewFromHash()
+  if (explicitView) {
+    rememberCoreView(explicitView)
+    return explicitView
+  }
+
+  try {
+    const remembered = sessionStorage.getItem(LAST_CORE_VIEW_KEY) as CoreView | null
+    if (remembered && CORE_VIEWS.includes(remembered)) return remembered
+  } catch {
+    // Fall through to the dashboard when storage is unavailable.
+  }
+
+  return 'dashboard'
+}
+
+function keepCoreViewInUrl(view: CoreView) {
+  if (location.hash === '#' + view) return
+  history.replaceState(null, '', '#' + view)
+}
+
 function shell(content: string, signedIn = false) {
-  const activeView = location.hash === '#operations' ? 'operations' : location.hash === '#orders' ? 'orders' : location.hash === '#customers' ? 'customers' : location.hash === '#catalog' ? 'catalog' : location.hash === '#analytics' ? 'analytics' : location.hash === '#finance' ? 'finance' : location.hash === '#referrals' ? 'referrals' : location.hash === '#admin-tools' ? 'admin-tools' : location.hash === '#notifications' ? 'notifications' : location.hash === '#audit' ? 'audit' : 'dashboard'
+  const activeView = resolveCoreView()
   const navigation = signedIn
     ? '<nav class="core-nav" aria-label="Core navigation" tabindex="0">' +
       '<a href="#dashboard" class="' + (activeView === 'dashboard' ? 'active' : '') + '"' + (activeView === 'dashboard' ? ' aria-current="page"' : '') + '>Dashboard</a>' +
@@ -823,57 +887,60 @@ async function render() {
   }
 
   const email = user.email || 'Core operator'
-  if (location.hash === '#operations') {
+  const activeView = resolveCoreView()
+  keepCoreViewInUrl(activeView)
+
+  if (activeView === 'operations') {
     await renderOperations(email)
     return
   }
 
-  if (location.hash === '#orders') {
+  if (activeView === 'orders') {
     await renderOrders(email)
     return
   }
 
-  if (location.hash === '#customers') {
+  if (activeView === 'customers') {
     await renderCustomers(email)
     return
   }
 
-  if (location.hash === '#catalog') {
+  if (activeView === 'catalog') {
     await renderCatalog(email)
     return
   }
 
-  if (location.hash === '#analytics') {
+  if (activeView === 'analytics') {
     await renderAnalytics(email)
     return
   }
 
-  if (location.hash === '#finance') {
+  if (activeView === 'finance') {
     await renderFinance(email)
     return
   }
 
-  if (location.hash === '#referrals') {
+  if (activeView === 'referrals') {
     await renderReferrals(email)
     return
   }
 
-  if (location.hash === '#admin-tools') {
+  if (activeView === 'admin-tools') {
     await renderAdminTools(email)
     return
   }
 
-  if (location.hash === '#notifications') {
+  if (activeView === 'notifications') {
     await renderNotifications(email)
     return
   }
 
-  if (location.hash === '#audit') {
+  if (activeView === 'audit') {
     await renderAudit(email)
     return
   }
 
-    await renderExecutiveDashboard(email)
+  await renderExecutiveDashboard(email)
   } catch (error) {
     console.error('Core startup failed', error)
     renderLogin(
