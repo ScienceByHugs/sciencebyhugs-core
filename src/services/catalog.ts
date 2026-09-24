@@ -71,3 +71,31 @@ export async function loadCoreCatalog(): Promise<CoreCatalogPayload> {
   if (!data?.success) throw new Error(data?.error || 'Could not load catalog')
   return data as CoreCatalogPayload
 }
+
+
+export type CatalogMetadataUpdate = {
+  productCode: string
+  researchName: string
+  purity: string
+  quantity: string
+  lotNumber: string
+  coaUrl: string
+}
+
+export async function updateCatalogMetadata(productId: string, metadata: CatalogMetadataUpdate) {
+  const { data, error } = await supabase.functions.invoke('core-catalog-control', {
+    body: {
+      action: 'update_metadata',
+      productId,
+      ...metadata,
+    },
+  })
+
+  if (error) throw error
+  if (!data?.success) throw new Error(data?.error || 'Could not update catalog metadata')
+  return data.product as Pick<
+    CoreCatalogProduct,
+    'id' | 'name' | 'product_code' | 'research_name' | 'purity' |
+    'quantity' | 'lot_number' | 'coa_url' | 'updated_at'
+  >
+}
