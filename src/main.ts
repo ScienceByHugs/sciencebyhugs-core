@@ -522,7 +522,14 @@ async function renderDashboard(email: string) {
         try {
           await verifyPayment(orderId)
           await renderDashboard(email)
-      
+        } catch (error) {
+          if (message) message.textContent = error instanceof Error ? error.message : 'Payment verification failed'
+          button.disabled = false
+          button.textContent = 'Verify Payment & Start Processing'
+        }
+      })
+    })
+
     document.querySelectorAll<HTMLButtonElement>('.fulfillment-button').forEach(button => {
       button.addEventListener('click', async () => {
         const orderId = button.dataset.orderId
@@ -560,14 +567,6 @@ async function renderDashboard(email: string) {
           if (message) message.textContent = error instanceof Error ? error.message : 'Fulfillment update failed'
           button.disabled = false
           button.textContent = 'Update Fulfillment'
-        }
-      })
-    })
-
-  } catch (error) {
-          if (message) message.textContent = error instanceof Error ? error.message : 'Payment verification failed'
-          button.disabled = false
-          button.textContent = 'Verify Payment & Start Processing'
         }
       })
     })
