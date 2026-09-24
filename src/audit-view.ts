@@ -81,7 +81,13 @@ export async function bindAuditPage(helpers: Helpers) {
                           event.after_data?.state, event.after_data?.postal_code
                         ].filter(Boolean).join(' · ') || '—') +
                         '</p></div></div>'
-                      : '') +
+                      : event.action === 'customer.email.update'
+                        ? '<div class="audit-change"><div><span>Before</span><p>' +
+                          helpers.escapeHtml(String(event.before_data?.email || '—')) +
+                          '</p></div><div><span>After</span><p>' +
+                          helpers.escapeHtml(String(event.after_data?.email || '—')) +
+                          '</p></div></div>'
+                        : '') +
           '</article>'
         }).join('')
       : '<div class="empty-state"><h2>No controlled changes yet.</h2><p>New audited actions will appear here.</p></div>'
