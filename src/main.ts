@@ -386,6 +386,20 @@ async function renderDashboard(email: string) {
       <div class="operator">Signed in as <strong>${escapeHtml(email)}</strong></div>
     </section>
     <section class="stats" id="stats"></section>
+    <section class="queue-toolbar" aria-label="Operations queue controls">
+      <div class="queue-tabs" id="queue-tabs">
+        <button class="queue-tab active" type="button" data-queue="attention">Needs attention</button>
+        <button class="queue-tab" type="button" data-queue="approval">Invoices</button>
+        <button class="queue-tab" type="button" data-queue="payment">Payments</button>
+        <button class="queue-tab" type="button" data-queue="fulfillment">Fulfillment</button>
+        <button class="queue-tab" type="button" data-queue="all">All</button>
+      </div>
+      <label class="queue-search">
+        <span class="sr-only">Search operations</span>
+        <input id="queue-search" type="search" placeholder="Search customer, invoice, order…" autocomplete="off">
+      </label>
+    </section>
+    <p class="queue-summary" id="queue-summary" aria-live="polite"></p>
     <section class="invoice-list" id="invoice-list">
       <div class="loading">Loading operations…</div>
     </section>
@@ -409,6 +423,7 @@ async function renderDashboard(email: string) {
     )
 
     const visible = invoices.slice(0, 50)
+    const invoiceById = new Map(visible.map(invoice => [invoice.id, invoice]))
 
     const stats = document.querySelector<HTMLDivElement>('#stats')
     if (stats) {
@@ -424,8 +439,114 @@ async function renderDashboard(email: string) {
     if (list) {
       list.innerHTML = visible.length
         ? visible.map(invoiceCard).join('')
-        : '<div class="empty-state"><h2>Queue clear.</h2><p>No invoice operations need attention.</p></div>'
+        : '<div class="empty-state"><h2>Queue clear.</h2><p>No operations are available.</p></div>'
     }
+
+    let activeQueue = 'attention'
+    let searchTerm = ''
+
+    const matchesQueue = (invoice: CoreInvoice, queue: string) => {
+      const awaitingApproval = invoice.status === 'awaiting_approval'
+      const readyToSend =
+        invoice.status === 'approved' &&
+        invoice.pdf_status === 'created' &&
+        invoice.send_status !== 'sent'
+      const submittedPayment = invoice.payment?.status === 'submitted'
+      const isPaid =
+        invoice.payment?.status === 'verified' ||
+        invoice.order?.payment_status === 'paid'
+      const fulfillmentStatus = invoice.order?.status || ''
+      const delayed = fulfillmentStatus === 'delayed'
+      const activeFulfillment =
+        isPaid &&
+        fulfillmentStatus !== 'delivered' &&
+        fulfillmentStatus !== 'cancelled'
+
+      if (queue === 'approval') return awaitingApproval || readyToSend
+      if (queue === 'payment') {
+        return submittedPayment || (
+          invoice.status === 'direct_checkout' &&
+          !isPaid
+        )
+      }
+      if (queue === 'fulfillment') return activeFulfillment
+      if (queue === 'attention') {
+        return awaitingApproval || readyToSend || submittedPayment || delayed
+      }
+      return true
+    }
+
+    const matchesSearch = (invoice: CoreInvoice, term: string) => {
+      if (!term) return true
+      const haystack = [
+        invoice.invoice_number,
+        invoice.customer_name_snapshot,
+        invoice.customer_email_snapshot,
+        invoice.customer_phone_snapshot,
+        invoice.order?.order_number,
+        invoice.order?.status,
+        invoice.payment?.provider,
+        invoice.payment?.payment_reference,
+      ]
+        .filter(Boolean)
+        .join(' ')
+        .toLowerCase()
+
+      return haystack.includes(term)
+    }
+
+    const applyQueueView = () => {
+      let shown = 0
+      document.querySelectorAll<HTMLElement>('.invoice-card').forEach(card => {
+        const invoice = invoiceById.get(card.dataset.invoiceId || '')
+        const show = Boolean(
+          invoice &&
+          matchesQueue(invoice, activeQueue) &&
+          matchesSearch(invoice, searchTerm),
+        )
+        card.hidden = !show
+        if (show) shown += 1
+      })
+
+      const summary = document.querySelector<HTMLParagraphElement>('#queue-summary')
+      if (summary) {
+        const label =
+          activeQueue === 'attention' ? 'needs attention' :
+          activeQueue === 'approval' ? 'invoice actions' :
+          activeQueue === 'payment' ? 'payment actions' :
+          activeQueue === 'fulfillment' ? 'fulfillment actions' :
+          'operations'
+        summary.textContent = `${shown} ${label}${searchTerm ? ' matching your search' : ''}.`
+      }
+
+      const empty = document.querySelector<HTMLElement>('#filtered-empty-state')
+      if (shown === 0 && visible.length) {
+        if (!empty && list) {
+          list.insertAdjacentHTML(
+            'beforeend',
+            '<div class="empty-state" id="filtered-empty-state"><h2>Nothing in this view.</h2><p>Try another queue or clear the search.</p></div>',
+          )
+        }
+      } else {
+        empty?.remove()
+      }
+    }
+
+    document.querySelectorAll<HTMLButtonElement>('.queue-tab').forEach(button => {
+      button.addEventListener('click', () => {
+        activeQueue = button.dataset.queue || 'attention'
+        document.querySelectorAll('.queue-tab').forEach(tab => tab.classList.remove('active'))
+        button.classList.add('active')
+        applyQueueView()
+      })
+    })
+
+    document.querySelector<HTMLInputElement>('#queue-search')?.addEventListener('input', event => {
+      searchTerm = (event.currentTarget as HTMLInputElement).value.trim().toLowerCase()
+      applyQueueView()
+    })
+
+    applyQueueView()
 
     document.querySelectorAll<HTMLButtonElement>('.approve-button').forEach(button => {
       button.addEventListener('click', async () => {
