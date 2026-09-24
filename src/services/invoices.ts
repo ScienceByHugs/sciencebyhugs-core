@@ -17,6 +17,12 @@ export type CoreOrderSummary = {
   payment_status: string | null
   payment_method: string | null
   paid_at: string | null
+  ordered_at: string | null
+  shipped_at: string | null
+  delivered_at: string | null
+  delayed_at: string | null
+  cancelled_at: string | null
+  completed_at: string | null
   updated_at: string
 }
 
@@ -117,5 +123,20 @@ export async function verifyPayment(orderId: string) {
 
   if (error) throw error
   if (!data?.success) throw new Error(data?.error || 'Could not verify payment')
+  return data
+}
+
+
+export async function updateFulfillment(
+  orderId: string,
+  status: 'ordered' | 'shipped' | 'delivered' | 'delayed' | 'cancelled' | 'processing',
+  note = '',
+) {
+  const { data, error } = await supabase.functions.invoke('core-fulfillment-control', {
+    body: { orderId, status, note },
+  })
+
+  if (error) throw error
+  if (!data?.success) throw new Error(data?.error || 'Could not update fulfillment')
   return data
 }
