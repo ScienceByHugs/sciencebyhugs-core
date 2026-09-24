@@ -41,6 +41,14 @@ const isAdminRole = (role: string) =>
 
 function shell(content: string, signedIn = false) {
   const activeView = location.hash === '#orders' ? 'orders' : location.hash === '#customers' ? 'customers' : 'operations'
+  const navigation = signedIn
+    ? '<nav class="core-nav" aria-label="Core navigation">' +
+      '<a href="#operations" class="' + (activeView === 'operations' ? 'active' : '') + '">Operations</a>' +
+      '<a href="#orders" class="' + (activeView === 'orders' ? 'active' : '') + '">Orders</a>' +
+      '<a href="#customers" class="' + (activeView === 'customers' ? 'active' : '') + '">Customers</a>' +
+      '</nav>'
+    : ''
+
   app.innerHTML = `
     <main class="shell">
       <header class="commandbar">
@@ -49,7 +57,7 @@ function shell(content: string, signedIn = false) {
           <strong>CORE</strong>
         </div>
         <div class="command-actions">
-          ${signedIn ? '<nav class="core-nav" aria-label="Core navigation"><a href="#operations" class="${activeView === 'operations' ? 'active' : ''}">Operations</a><a href="#orders" class="${activeView === 'orders' ? 'active' : ''}">Orders</a><a href="#customers" class="${activeView === 'customers' ? 'active' : ''}">Customers</a></nav>' : ''}
+          ${navigation}
           <span class="status">SYSTEM READY</span>
           ${signedIn ? '<button class="ghost compact" id="sign-out">Sign out</button>' : ''}
         </div>
