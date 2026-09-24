@@ -182,15 +182,22 @@ export async function bindCatalogPage(helpers: Helpers) {
     }
 
     const syncEl = document.querySelector<HTMLDivElement>('#catalog-sync')
-    const latestSync = syncRuns[0]
-    if (syncEl && latestSync) {
-      syncEl.innerHTML = '<div><span class="eyebrow">LATEST CATALOG SYNC</span>' +
-        '<strong>' + helpers.escapeHtml(latestSync.status) + '</strong>' +
-        '<p>' + (latestSync.received_count ?? 0) + ' received · ' +
-        (latestSync.upserted_count ?? 0) + ' upserted · ' +
-        (latestSync.deactivated_count ?? 0) + ' deactivated · ' +
-        helpers.escapeHtml(helpers.dateTime(latestSync.completed_at || latestSync.started_at)) + '</p>' +
-        (latestSync.error_message ? '<p class="form-message">' + helpers.escapeHtml(latestSync.error_message) + '</p>' : '') +
+    if (syncEl) {
+      const rows = syncRuns.slice(0, 6)
+      syncEl.innerHTML =
+        '<div><span class="eyebrow">SYNC HISTORY</span><strong>Vendor catalog refreshes</strong>' +
+        '<p>Read-only history from the vendor-backed Google catalog sync.</p>' +
+        (rows.length
+          ? '<div class="catalog-sync-history">' + rows.map(run =>
+              '<div class="catalog-sync-row">' +
+                '<strong class="' + (run.status.toLowerCase() === 'completed' ? 'success' : 'failure') + '">' +
+                  helpers.escapeHtml(run.status) + '</strong>' +
+                '<span>' + helpers.escapeHtml(helpers.dateTime(run.completed_at || run.started_at)) + '</span>' +
+                '<span>' + (run.received_count ?? 0) + ' received · ' + (run.upserted_count ?? 0) + ' upserted</span>' +
+                '<span>' + (run.deactivated_count ?? 0) + ' deactivated</span>' +
+              '</div>'
+            ).join('') + '</div>'
+          : '<div class="empty-state compact"><strong>No sync history yet.</strong></div>') +
         '</div>'
     }
 
