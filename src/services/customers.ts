@@ -80,11 +80,21 @@ export type CoreCustomer = {
   rewards: CoreCustomerReward[]
 }
 
-export async function listCoreCustomers(): Promise<CoreCustomer[]> {
+export type CoreMembership = NonNullable<CoreCustomer['membership']>
+
+export type CoreCustomersWorkspace = {
+  customers: CoreCustomer[]
+  memberships: CoreMembership[]
+}
+
+export async function loadCoreCustomers(): Promise<CoreCustomersWorkspace> {
   const { data, error } = await supabase.functions.invoke('core-customers', { body: {} })
   if (error) throw error
   if (!data?.success) throw new Error(data?.error || 'Could not load customers')
-  return data.customers || []
+  return {
+    customers: data.customers || [],
+    memberships: data.memberships || [],
+  }
 }
 
 
@@ -121,4 +131,24 @@ export async function updateCustomerContactPreference(
     CoreCustomer,
     'id' | 'customer_number' | 'notes' | 'preferred_contact_method' | 'updated_at'
   >
+}
+
+
+export async function updateCustomerMembership(customerId: string, membershipId: string) {
+  const { data, error } = await supabase.functions.invoke('core-customer-control', {
+    body: {
+      action: 'update_membership',
+      customerId,
+      membershipId,
+    },
+  })
+
+  if (error) throw error
+  if (!data?.success) throw new Error(data?.error || 'Could not update membership')
+  return {
+    customer: data.customer as Pick<CoreCustomer, 'id' | 'customer_number' | 'updated_at'> & {
+      membership_id: string
+    },
+    membership: data.membership as CoreMembership,
+  }
 }
