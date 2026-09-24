@@ -109,7 +109,8 @@ function renderForbidden(email: string) {
 }
 
 function paymentPanel(invoice: CoreInvoice) {
-  if (!invoice.order_id || invoice.send_status !== 'sent') return ''
+  const directCheckout = invoice.status === 'direct_checkout'
+  if (!invoice.order_id || (!directCheckout && invoice.send_status !== 'sent')) return ''
 
   const payment = invoice.payment
   const verified =
@@ -278,6 +279,7 @@ function fulfillmentPanel(invoice: CoreInvoice) {
 }
 
 function invoiceCard(invoice: CoreInvoice) {
+  const directCheckout = invoice.status === 'direct_checkout'
   const awaiting = invoice.status === 'awaiting_approval'
   const sent = invoice.status === 'sent' || invoice.send_status === 'sent'
   const ready =
@@ -312,17 +314,21 @@ function invoiceCard(invoice: CoreInvoice) {
       ? 'Awaiting Approval'
       : paid
         ? fulfillmentLabel
-        : sent
-          ? 'Invoice Sent'
-          : ready
-            ? 'PDF Ready'
-            : invoice.status
+        : directCheckout
+          ? invoice.payment?.status === 'submitted'
+            ? 'Payment Submitted'
+            : 'Awaiting Payment'
+          : sent
+            ? 'Invoice Sent'
+            : ready
+              ? 'PDF Ready'
+              : invoice.status
 
   return `
     <article class="invoice-card" data-invoice-id="${escapeHtml(invoice.id)}">
       <div class="invoice-top">
         <div>
-          <span class="eyebrow">${escapeHtml(invoice.invoice_number)}</span>
+          <span class="eyebrow">${directCheckout ? 'DIRECT CHECKOUT · ' : ''}${escapeHtml(invoice.invoice_number)}</span>
           <h2>${escapeHtml(invoice.customer_name_snapshot || 'Customer')}</h2>
           <p>${escapeHtml(invoice.customer_email_snapshot || '')}</p>
         </div>
@@ -375,7 +381,7 @@ async function renderDashboard(email: string) {
       <div>
         <span class="eyebrow">INVOICE + PAYMENT OPERATIONS</span>
         <h1 class="dashboard-title">Operations Control</h1>
-        <p class="copy">Approve invoices, deliver PDFs, record payment submissions, and explicitly verify payments before orders enter processing.</p>
+        <p class="copy">Manage direct checkout orders, approve emailed invoices, review payment submissions, and control fulfillment.</p>
       </div>
       <div class="operator">Signed in as <strong>${escapeHtml(email)}</strong></div>
     </section>
