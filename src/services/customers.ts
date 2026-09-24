@@ -101,3 +101,24 @@ export async function updateCustomerNotes(customerId: string, notes: string) {
   if (!data?.success) throw new Error(data?.error || 'Could not update customer notes')
   return data.customer as Pick<CoreCustomer, 'id' | 'customer_number' | 'notes' | 'updated_at'>
 }
+
+
+export async function updateCustomerContactPreference(
+  customerId: string,
+  preferredContactMethod: string | null,
+) {
+  const { data, error } = await supabase.functions.invoke('core-customer-control', {
+    body: {
+      action: 'update_contact_preference',
+      customerId,
+      preferredContactMethod,
+    },
+  })
+
+  if (error) throw error
+  if (!data?.success) throw new Error(data?.error || 'Could not update contact preference')
+  return data.customer as Pick<
+    CoreCustomer,
+    'id' | 'customer_number' | 'notes' | 'preferred_contact_method' | 'updated_at'
+  >
+}
