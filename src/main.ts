@@ -1,6 +1,7 @@
 import './styles.css'
 import { supabase } from './services/supabase'
 import { bindOrdersPage, ordersPageMarkup } from './orders-view'
+import { bindCustomersPage, customersPageMarkup } from './customers-view'
 import {
   approveInvoice,
   listCoreInvoices,
@@ -39,7 +40,7 @@ const isAdminRole = (role: string) =>
   role === 'owner' || role === 'admin'
 
 function shell(content: string, signedIn = false) {
-  const activeView = location.hash === '#orders' ? 'orders' : 'operations'
+  const activeView = location.hash === '#orders' ? 'orders' : location.hash === '#customers' ? 'customers' : 'operations'
   app.innerHTML = `
     <main class="shell">
       <header class="commandbar">
@@ -48,7 +49,7 @@ function shell(content: string, signedIn = false) {
           <strong>CORE</strong>
         </div>
         <div class="command-actions">
-          ${signedIn ? '<nav class="core-nav" aria-label="Core navigation"><a href="#operations" class="' + (activeView === 'operations' ? 'active' : '') + '">Operations</a><a href="#orders" class="' + (activeView === 'orders' ? 'active' : '') + '">Orders</a></nav>' : ''}
+          ${signedIn ? '<nav class="core-nav" aria-label="Core navigation"><a href="#operations" class="${activeView === 'operations' ? 'active' : ''}">Operations</a><a href="#orders" class="${activeView === 'orders' ? 'active' : ''}">Orders</a><a href="#customers" class="${activeView === 'customers' ? 'active' : ''}">Customers</a></nav>' : ''}
           <span class="status">SYSTEM READY</span>
           ${signedIn ? '<button class="ghost compact" id="sign-out">Sign out</button>' : ''}
         </div>
@@ -725,6 +726,11 @@ async function renderOrders(email: string) {
   await bindOrdersPage({ escapeHtml, money, dateTime })
 }
 
+async function renderCustomers(email: string) {
+  shell(customersPageMarkup(email, escapeHtml), true)
+  await bindCustomersPage({ escapeHtml, money, dateTime })
+}
+
 async function render() {
   const { data: { user } } = await supabase.auth.getUser()
 
@@ -742,6 +748,11 @@ async function render() {
   const email = user.email || 'Core operator'
   if (location.hash === '#orders') {
     await renderOrders(email)
+    return
+  }
+
+  if (location.hash === '#customers') {
+    await renderCustomers(email)
     return
   }
 
