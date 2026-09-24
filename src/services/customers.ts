@@ -191,3 +191,13 @@ export async function updateCustomerProfile(customerId: string, profile: Custome
     'address_line_1' | 'address_line_2' | 'city' | 'state' | 'postal_code' | 'updated_at'
   >
 }
+
+
+export async function updateCustomerEmail(customerId: string, email: string) {
+  const { data, error } = await supabase.functions.invoke('core-customer-control', {
+    body: { action: 'update_email', customerId, email },
+  })
+  if (error) throw error
+  if (!data?.success) throw new Error(data?.error || 'Could not update customer email')
+  return data.customer as Pick<CoreCustomer, 'id' | 'customer_number' | 'email' | 'updated_at'>
+}
