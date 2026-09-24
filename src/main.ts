@@ -8,6 +8,7 @@ import { bindAuditPage, auditPageMarkup } from './audit-view'
 import { bindAnalyticsPage, analyticsPageMarkup } from './analytics-view'
 import { bindFinancePage, financePageMarkup } from './finance-view'
 import { bindReferralsPage, referralsPageMarkup } from './referrals-view'
+import { bindAdminToolsPage, adminToolsPageMarkup } from './admin-tools-view'
 import {
   approveInvoice,
   listCoreInvoices,
@@ -46,7 +47,7 @@ const isAdminRole = (role: string) =>
   role === 'owner' || role === 'admin'
 
 function shell(content: string, signedIn = false) {
-  const activeView = location.hash === '#operations' ? 'operations' : location.hash === '#orders' ? 'orders' : location.hash === '#customers' ? 'customers' : location.hash === '#catalog' ? 'catalog' : location.hash === '#analytics' ? 'analytics' : location.hash === '#finance' ? 'finance' : location.hash === '#referrals' ? 'referrals' : location.hash === '#audit' ? 'audit' : 'dashboard'
+  const activeView = location.hash === '#operations' ? 'operations' : location.hash === '#orders' ? 'orders' : location.hash === '#customers' ? 'customers' : location.hash === '#catalog' ? 'catalog' : location.hash === '#analytics' ? 'analytics' : location.hash === '#finance' ? 'finance' : location.hash === '#referrals' ? 'referrals' : location.hash === '#admin-tools' ? 'admin-tools' : location.hash === '#audit' ? 'audit' : 'dashboard'
   const navigation = signedIn
     ? '<nav class="core-nav" aria-label="Core navigation">' +
       '<a href="#dashboard" class="' + (activeView === 'dashboard' ? 'active' : '') + '">Dashboard</a>' +
@@ -57,6 +58,7 @@ function shell(content: string, signedIn = false) {
       '<a href="#analytics" class="' + (activeView === 'analytics' ? 'active' : '') + '">Analytics</a>' +
       '<a href="#finance" class="' + (activeView === 'finance' ? 'active' : '') + '">Finance</a>' +
       '<a href="#referrals" class="' + (activeView === 'referrals' ? 'active' : '') + '">Referrals</a>' +
+      '<a href="#admin-tools" class="' + (activeView === 'admin-tools' ? 'active' : '') + '">Admin</a>' +
       '<a href="#audit" class="' + (activeView === 'audit' ? 'active' : '') + '">Audit</a>' +
       '</nav>'
     : ''
@@ -776,6 +778,11 @@ async function renderReferrals(email: string) {
   await bindReferralsPage({ escapeHtml, dateTime })
 }
 
+async function renderAdminTools(email: string) {
+  shell(adminToolsPageMarkup(email, escapeHtml), true)
+  await bindAdminToolsPage({ escapeHtml })
+}
+
 async function renderAudit(email: string) {
   shell(auditPageMarkup(email, escapeHtml), true)
   await bindAuditPage({ escapeHtml, dateTime })
@@ -828,6 +835,11 @@ async function render() {
 
   if (location.hash === '#referrals') {
     await renderReferrals(email)
+    return
+  }
+
+  if (location.hash === '#admin-tools') {
+    await renderAdminTools(email)
     return
   }
 
