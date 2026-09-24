@@ -10,6 +10,31 @@ export type CoreInvoiceItem = {
   line_total: number
 }
 
+export type CoreOrderSummary = {
+  id: string
+  order_number: string | null
+  status: string
+  payment_status: string | null
+  payment_method: string | null
+  paid_at: string | null
+  updated_at: string
+}
+
+export type CorePayment = {
+  id: string
+  order_id: string
+  provider: string | null
+  payment_reference: string | null
+  amount: number
+  status: string
+  notes: string | null
+  submitted_at: string | null
+  verified_at: string | null
+  paid_at: string | null
+  created_at: string
+  updated_at: string
+}
+
 export type CoreInvoice = {
   id: string
   invoice_number: string
@@ -36,6 +61,8 @@ export type CoreInvoice = {
   sent_at: string | null
   sent_to: string | null
   items: CoreInvoiceItem[]
+  order: CoreOrderSummary | null
+  payment: CorePayment | null
 }
 
 export async function listCoreInvoices(): Promise<CoreInvoice[]> {
@@ -56,5 +83,39 @@ export async function sendInvoice(invoiceId: string) {
   const { data, error } = await supabase.functions.invoke('send-invoice', { body: { invoiceId } })
   if (error) throw error
   if (!data?.success) throw new Error(data?.error || 'Could not send invoice')
+  return data
+}
+
+export async function recordPayment(
+  orderId: string,
+  provider: string,
+  paymentReference: string,
+  notes: string,
+) {
+  const { data, error } = await supabase.functions.invoke('core-payment-control', {
+    body: {
+      action: 'record',
+      orderId,
+      provider,
+      paymentReference,
+      notes,
+    },
+  })
+
+  if (error) throw error
+  if (!data?.success) throw new Error(data?.error || 'Could not record payment')
+  return data
+}
+
+export async function verifyPayment(orderId: string) {
+  const { data, error } = await supabase.functions.invoke('core-payment-control', {
+    body: {
+      action: 'verify',
+      orderId,
+    },
+  })
+
+  if (error) throw error
+  if (!data?.success) throw new Error(data?.error || 'Could not verify payment')
   return data
 }
