@@ -82,7 +82,7 @@ function renderLogin(message = '') {
 
   document.querySelector<HTMLFormElement>('#login-form')?.addEventListener('submit', async (event) => {
     event.preventDefault()
-    const formElement = event.currentTarget
+    const formElement = event.currentTarget as HTMLFormElement
     const form = new FormData(formElement)
     const email = String(form.get('email') || '').trim()
     const password = String(form.get('password') || '')
