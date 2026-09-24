@@ -152,3 +152,13 @@ export async function updateCustomerMembership(customerId: string, membershipId:
     membership: data.membership as CoreMembership,
   }
 }
+
+
+export async function updateCustomerAccountStatus(customerId: string, accountStatus: 'Active' | 'Suspended') {
+  const { data, error } = await supabase.functions.invoke('core-customer-control', {
+    body: { action: 'update_account_status', customerId, accountStatus },
+  })
+  if (error) throw error
+  if (!data?.success) throw new Error(data?.error || 'Could not update account status')
+  return data.customer as Pick<CoreCustomer, 'id' | 'customer_number' | 'account_status' | 'updated_at'>
+}
