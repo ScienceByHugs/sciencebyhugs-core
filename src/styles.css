@@ -741,3 +741,40 @@ button:disabled{opacity:.6;cursor:progress}
 .notification-row time{color:var(--muted);font-size:.68rem}
 .notification-row i{font-style:normal;color:var(--secondary);font-size:.7rem}
 @media(max-width:760px){.notification-kpis{grid-template-columns:repeat(2,1fr)}.notification-row{grid-template-columns:auto 1fr}.notification-row time,.notification-row i{grid-column:2/3}}
+
+
+/* V1 polish: shared shell, accessibility, responsive behavior */
+.skip-link{position:fixed;top:10px;left:10px;z-index:1000;transform:translateY(-160%);padding:9px 12px;border-radius:10px;background:var(--text);color:#050505;font-weight:900;text-decoration:none}
+.skip-link:focus{transform:translateY(0)}
+#core-content:focus{outline:none}
+.core-nav{max-width:min(100%,900px);overflow-x:auto;overscroll-behavior-x:contain;scrollbar-width:thin;-webkit-overflow-scrolling:touch}
+.core-nav a{white-space:nowrap;flex:0 0 auto}
+.core-nav a[aria-current="page"]{box-shadow:inset 0 -2px 0 var(--primary)}
+button:focus-visible,a:focus-visible,input:focus-visible,select:focus-visible,textarea:focus-visible,summary:focus-visible,.core-nav:focus-visible{
+  outline:2px solid var(--secondary);outline-offset:3px
+}
+button:disabled{cursor:not-allowed;opacity:.58}
+.loading{min-height:96px;display:grid;place-items:center;color:var(--muted);border:1px dashed #2d291f;border-radius:16px;background:rgba(0,0,0,.12)}
+.error-state{border-color:color-mix(in srgb,#e18a8a 45%,#2d291f)!important}
+.empty-state{overflow-wrap:anywhere}
+.operator{overflow-wrap:anywhere}
+.dashboard-title{overflow-wrap:anywhere}
+.commandbar{position:sticky;top:0;z-index:50;backdrop-filter:blur(14px);-webkit-backdrop-filter:blur(14px)}
+@media(max-width:1180px){
+  .commandbar{align-items:flex-start}
+  .command-actions{min-width:0;max-width:75vw}
+  .core-nav{max-width:100%}
+}
+@media(max-width:760px){
+  .shell{padding-left:max(14px,env(safe-area-inset-left));padding-right:max(14px,env(safe-area-inset-right));padding-bottom:max(18px,env(safe-area-inset-bottom))}
+  .commandbar{position:relative;display:block}
+  .command-actions{max-width:none;margin-top:12px;display:grid;grid-template-columns:minmax(0,1fr) auto;gap:10px;align-items:center}
+  .core-nav{grid-column:1/-1;width:100%;display:flex;gap:6px;padding:4px 2px 8px}
+  .core-nav a{min-height:38px;display:flex;align-items:center}
+  .status{justify-self:start}
+  .dashboard-head{display:block}
+  .operator{margin-top:10px}
+}
+@media(prefers-reduced-motion:reduce){
+  *,*::before,*::after{scroll-behavior:auto!important;animation-duration:.001ms!important;animation-iteration-count:1!important;transition-duration:.001ms!important}
+}
