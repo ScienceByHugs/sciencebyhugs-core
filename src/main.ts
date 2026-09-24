@@ -470,7 +470,33 @@ function invoiceCard(invoice: CoreInvoice) {
   `
 }
 
+type OperationsQueue = 'attention' | 'approval' | 'payment' | 'fulfillment' | 'all'
+
+const OPERATIONS_QUEUE_KEY = 'sciencebyhugs-core:operations-queue'
+const OPERATIONS_QUEUES: OperationsQueue[] = ['attention', 'approval', 'payment', 'fulfillment', 'all']
+
+function resolveOperationsQueue(): OperationsQueue {
+  try {
+    const stored = sessionStorage.getItem(OPERATIONS_QUEUE_KEY) as OperationsQueue | null
+    if (stored && OPERATIONS_QUEUES.includes(stored)) return stored
+  } catch {
+    // Fall back to the default queue when session storage is unavailable.
+  }
+
+  return 'attention'
+}
+
+function rememberOperationsQueue(queue: OperationsQueue) {
+  try {
+    sessionStorage.setItem(OPERATIONS_QUEUE_KEY, queue)
+  } catch {
+    // Queue persistence is a convenience; the UI still works without storage.
+  }
+}
+
 async function renderOperations(email: string) {
+  let activeQueue = resolveOperationsQueue()
+
   shell(`
     <section class="dashboard-head">
       <div>
@@ -483,11 +509,11 @@ async function renderOperations(email: string) {
     <section class="stats" id="stats"></section>
     <section class="queue-toolbar" aria-label="Operations queue controls">
       <div class="queue-tabs" id="queue-tabs">
-        <button class="queue-tab active" type="button" data-queue="attention">Needs attention</button>
-        <button class="queue-tab" type="button" data-queue="approval">Invoices</button>
-        <button class="queue-tab" type="button" data-queue="payment">Payments</button>
-        <button class="queue-tab" type="button" data-queue="fulfillment">Fulfillment</button>
-        <button class="queue-tab" type="button" data-queue="all">All</button>
+        <button class="queue-tab ${activeQueue === 'attention' ? 'active' : ''}" type="button" data-queue="attention">Needs attention</button>
+        <button class="queue-tab ${activeQueue === 'approval' ? 'active' : ''}" type="button" data-queue="approval">Invoices</button>
+        <button class="queue-tab ${activeQueue === 'payment' ? 'active' : ''}" type="button" data-queue="payment">Payments</button>
+        <button class="queue-tab ${activeQueue === 'fulfillment' ? 'active' : ''}" type="button" data-queue="fulfillment">Fulfillment</button>
+        <button class="queue-tab ${activeQueue === 'all' ? 'active' : ''}" type="button" data-queue="all">All</button>
       </div>
       <label class="queue-search">
         <span class="sr-only">Search operations</span>
@@ -537,7 +563,6 @@ async function renderOperations(email: string) {
         : '<div class="empty-state"><h2>Queue clear.</h2><p>No operations are available.</p></div>'
     }
 
-    let activeQueue = 'attention'
     let searchTerm = ''
 
     const matchesQueue = (invoice: CoreInvoice, queue: string) => {
@@ -629,7 +654,9 @@ async function renderOperations(email: string) {
 
     document.querySelectorAll<HTMLButtonElement>('.queue-tab').forEach(button => {
       button.addEventListener('click', () => {
-        activeQueue = button.dataset.queue || 'attention'
+        const nextQueue = button.dataset.queue as OperationsQueue | undefined
+        activeQueue = nextQueue && OPERATIONS_QUEUES.includes(nextQueue) ? nextQueue : 'attention'
+        rememberOperationsQueue(activeQueue)
         document.querySelectorAll('.queue-tab').forEach(tab => tab.classList.remove('active'))
         button.classList.add('active')
         applyQueueView()
