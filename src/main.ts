@@ -1,12 +1,25 @@
 import './styles.css'
 import { supabase } from './services/supabase'
-import { approveInvoice, listCoreInvoices, sendInvoice, type CoreInvoice } from './services/invoices'
+import {
+  approveInvoice,
+  listCoreInvoices,
+  recordPayment,
+  sendInvoice,
+  verifyPayment,
+  type CoreInvoice,
+} from './services/invoices'
 
 const app = document.querySelector<HTMLDivElement>('#app')
 if (!app) throw new Error('App root not found')
 
 const money = (value: number | string | null | undefined) =>
-  new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD' }).format(Number(value || 0))
+  new Intl.NumberFormat('en-US', {
+    style: 'currency',
+    currency: 'USD',
+  }).format(Number(value || 0))
+
+const dateTime = (value: string | null | undefined) =>
+  value ? new Date(value).toLocaleString() : '—'
 
 const escapeHtml = (value: unknown) =>
   String(value ?? '')
@@ -16,21 +29,29 @@ const escapeHtml = (value: unknown) =>
     .replaceAll('"', '&quot;')
     .replaceAll("'", '&#039;')
 
-const roleFor = (user: any) => String(user?.app_metadata?.role || '').trim().toLowerCase()
-const isAdminRole = (role: string) => role === 'owner' || role === 'admin'
+const roleFor = (user: any) =>
+  String(user?.app_metadata?.role || '').trim().toLowerCase()
+
+const isAdminRole = (role: string) =>
+  role === 'owner' || role === 'admin'
 
 function shell(content: string, signedIn = false) {
   app.innerHTML = `
     <main class="shell">
       <header class="commandbar">
-        <div><span class="eyebrow">SCIENCE BY HUGs</span><strong>CORE</strong></div>
+        <div>
+          <span class="eyebrow">SCIENCE BY HUGs</span>
+          <strong>CORE</strong>
+        </div>
         <div class="command-actions">
           <span class="status">SYSTEM READY</span>
           ${signedIn ? '<button class="ghost compact" id="sign-out">Sign out</button>' : ''}
         </div>
       </header>
       ${content}
-    </main>`
+    </main>
+  `
+
   document.querySelector('#sign-out')?.addEventListener('click', async () => {
     await supabase.auth.signOut()
   })
@@ -51,7 +72,9 @@ function renderLogin(message = '') {
         </form>
         <p class="form-message" id="login-message">${escapeHtml(message)}</p>
       </div>
-    </section>`)
+    </section>
+  `)
+
   document.querySelector<HTMLFormElement>('#login-form')?.addEventListener('submit', async (event) => {
     event.preventDefault()
     const form = new FormData(event.currentTarget)
@@ -59,13 +82,15 @@ function renderLogin(message = '') {
     const password = String(form.get('password') || '')
     const messageEl = document.querySelector<HTMLParagraphElement>('#login-message')
     const button = event.currentTarget.querySelector<HTMLButtonElement>('button[type="submit"]')
+
     if (messageEl) messageEl.textContent = 'Authenticating…'
     if (button) button.disabled = true
+
     const { error } = await supabase.auth.signInWithPassword({ email, password })
+
     if (error) {
       if (messageEl) messageEl.textContent = error.message
       if (button) button.disabled = false
-      return
     }
   })
 }
@@ -78,20 +103,147 @@ function renderForbidden(email: string) {
         <h2>Core access not assigned.</h2>
         <p class="copy"><strong>${escapeHtml(email)}</strong> is authenticated, but this account is not marked as a Core owner or administrator.</p>
       </div>
-    </section>`, true)
+    </section>
+  `, true)
+}
+
+function paymentPanel(invoice: CoreInvoice) {
+  if (!invoice.order_id || invoice.send_status !== 'sent') return ''
+
+  const payment = invoice.payment
+  const verified =
+    payment?.status === 'verified' ||
+    invoice.order?.payment_status === 'paid'
+
+  const submitted =
+    payment?.status === 'submitted' &&
+    !verified
+
+  if (verified) {
+    return `
+      <section class="payment-panel verified">
+        <div class="payment-panel-head">
+          <div>
+            <span class="eyebrow">PAYMENT CONTROL</span>
+            <h3>Payment verified</h3>
+          </div>
+          <span class="payment-badge paid">PAID</span>
+        </div>
+        <div class="payment-data">
+          <div><span>Method</span><strong>${escapeHtml(payment?.provider || invoice.order?.payment_method || '—')}</strong></div>
+          <div><span>Reference</span><strong>${escapeHtml(payment?.payment_reference || '—')}</strong></div>
+          <div><span>Amount</span><strong>${money(payment?.amount || invoice.total)}</strong></div>
+          <div><span>Verified</span><strong>${escapeHtml(dateTime(payment?.verified_at || payment?.paid_at || invoice.order?.paid_at))}</strong></div>
+        </div>
+        <p class="payment-note">Order moved to <strong>Processing</strong> after payment verification.</p>
+      </section>
+    `
+  }
+
+  if (submitted) {
+    return `
+      <section class="payment-panel submitted">
+        <div class="payment-panel-head">
+          <div>
+            <span class="eyebrow">PAYMENT CONTROL</span>
+            <h3>Payment submitted</h3>
+          </div>
+          <span class="payment-badge submitted">REVIEW</span>
+        </div>
+        <div class="payment-data">
+          <div><span>Method</span><strong>${escapeHtml(payment?.provider || '—')}</strong></div>
+          <div><span>Reference</span><strong>${escapeHtml(payment?.payment_reference || '—')}</strong></div>
+          <div><span>Amount</span><strong>${money(payment?.amount || invoice.total)}</strong></div>
+          <div><span>Submitted</span><strong>${escapeHtml(dateTime(payment?.submitted_at))}</strong></div>
+        </div>
+        ${payment?.notes ? `<p class="payment-note">${escapeHtml(payment.notes)}</p>` : ''}
+        <button
+          class="primary verify-payment-button"
+          type="button"
+          data-order-id="${escapeHtml(invoice.order_id)}"
+          data-number="${escapeHtml(invoice.invoice_number)}"
+        >
+          Verify Payment & Start Processing
+        </button>
+      </section>
+    `
+  }
+
+  return `
+    <section class="payment-panel">
+      <div class="payment-panel-head">
+        <div>
+          <span class="eyebrow">PAYMENT CONTROL</span>
+          <h3>Waiting for payment</h3>
+        </div>
+        <span class="payment-badge">UNPAID</span>
+      </div>
+      <p class="payment-note">Record a payment only after you have a transaction or confirmation to reference. This does not move money.</p>
+      <div class="payment-form-grid">
+        <label>
+          Method
+          <select class="payment-provider">
+            <option value="">Choose method</option>
+            <option value="Zelle">Zelle</option>
+            <option value="PayPal">PayPal</option>
+            <option value="Venmo">Venmo</option>
+          </select>
+        </label>
+        <label>
+          Reference / confirmation
+          <input class="payment-reference" type="text" maxlength="120" placeholder="Optional confirmation ID">
+        </label>
+        <label class="payment-notes-field">
+          Notes
+          <input class="payment-notes" type="text" maxlength="300" placeholder="Optional internal note">
+        </label>
+      </div>
+      <button
+        class="secondary record-payment-button"
+        type="button"
+        data-order-id="${escapeHtml(invoice.order_id)}"
+      >
+        Record Payment Submitted
+      </button>
+    </section>
+  `
 }
 
 function invoiceCard(invoice: CoreInvoice) {
   const awaiting = invoice.status === 'awaiting_approval'
   const sent = invoice.status === 'sent' || invoice.send_status === 'sent'
-  const ready = invoice.status === 'approved' && invoice.pdf_status === 'created' && !sent
-  const itemRows = invoice.items.map(item => `
-    <div class="line-item">
-      <div><strong>${escapeHtml(item.product_name)}</strong><span>${escapeHtml(item.product_code || '')}</span></div>
-      <span>${item.quantity} × ${money(item.unit_price)}</span>
-      <strong>${money(item.line_total)}</strong>
-    </div>`).join('')
-  const statusText = awaiting ? 'Awaiting Approval' : sent ? 'Invoice Sent' : ready ? 'PDF Ready' : invoice.status
+  const ready =
+    invoice.status === 'approved' &&
+    invoice.pdf_status === 'created' &&
+    !sent
+
+  const paid =
+    invoice.payment?.status === 'verified' ||
+    invoice.order?.payment_status === 'paid'
+
+  const itemRows = invoice.items
+    .map(item => `
+      <div class="line-item">
+        <div>
+          <strong>${escapeHtml(item.product_name)}</strong>
+          <span>${escapeHtml(item.product_code || '')}</span>
+        </div>
+        <span>${item.quantity} × ${money(item.unit_price)}</span>
+        <strong>${money(item.line_total)}</strong>
+      </div>
+    `)
+    .join('')
+
+  const statusText =
+    awaiting
+      ? 'Awaiting Approval'
+      : paid
+        ? 'Paid · Processing'
+        : sent
+          ? 'Invoice Sent'
+          : ready
+            ? 'PDF Ready'
+            : invoice.status
 
   return `
     <article class="invoice-card" data-invoice-id="${escapeHtml(invoice.id)}">
@@ -101,7 +253,9 @@ function invoiceCard(invoice: CoreInvoice) {
           <h2>${escapeHtml(invoice.customer_name_snapshot || 'Customer')}</h2>
           <p>${escapeHtml(invoice.customer_email_snapshot || '')}</p>
         </div>
-        <span class="status-pill ${awaiting ? 'awaiting' : sent ? 'sent' : ready ? 'ready' : ''}">${escapeHtml(statusText)}</span>
+        <span class="status-pill ${awaiting ? 'awaiting' : paid ? 'paid' : sent ? 'sent' : ready ? 'ready' : ''}">
+          ${escapeHtml(statusText)}
+        </span>
       </div>
 
       <div class="items">${itemRows || '<p class="muted">No item detail available.</p>'}</div>
@@ -118,13 +272,17 @@ function invoiceCard(invoice: CoreInvoice) {
           <span class="eyebrow">READY TO SEND</span>
           <p>The approved PDF will be emailed to <strong>${escapeHtml(invoice.customer_email_snapshot || '')}</strong> from <strong>admin@sciencebyhugs.com</strong>.</p>
           <p class="muted">Sending is separate from approval and requires confirmation.</p>
-        </div>` : ''}
+        </div>
+      ` : ''}
 
       ${sent ? `
         <div class="send-preview sent-preview">
           <span class="eyebrow">DELIVERED BY EMAIL</span>
-          <p>Sent to <strong>${escapeHtml(invoice.sent_to || invoice.customer_email_snapshot || '')}</strong>${invoice.sent_at ? ` on ${escapeHtml(new Date(invoice.sent_at).toLocaleString())}` : ''}.</p>
-        </div>` : ''}
+          <p>Sent to <strong>${escapeHtml(invoice.sent_to || invoice.customer_email_snapshot || '')}</strong>${invoice.sent_at ? ` on ${escapeHtml(dateTime(invoice.sent_at))}` : ''}.</p>
+        </div>
+      ` : ''}
+
+      ${paymentPanel(invoice)}
 
       <div class="invoice-actions">
         ${invoice.google_sheet_url ? `<a class="button secondary" href="${escapeHtml(invoice.google_sheet_url)}" target="_blank" rel="noreferrer">Open Sheet</a>` : ''}
@@ -133,46 +291,74 @@ function invoiceCard(invoice: CoreInvoice) {
         ${ready ? `<button class="primary send-button" data-id="${escapeHtml(invoice.id)}" data-number="${escapeHtml(invoice.invoice_number)}" data-recipient="${escapeHtml(invoice.customer_email_snapshot || '')}">Send Invoice</button>` : ''}
       </div>
       <p class="card-message" aria-live="polite"></p>
-    </article>`
+    </article>
+  `
 }
 
 async function renderDashboard(email: string) {
   shell(`
     <section class="dashboard-head">
       <div>
-        <span class="eyebrow">INVOICE OPERATIONS</span>
-        <h1 class="dashboard-title">Invoice Control</h1>
-        <p class="copy">Review requests, create approved PDFs, then send them as a separate controlled action.</p>
+        <span class="eyebrow">INVOICE + PAYMENT OPERATIONS</span>
+        <h1 class="dashboard-title">Operations Control</h1>
+        <p class="copy">Approve invoices, deliver PDFs, record payment submissions, and explicitly verify payments before orders enter processing.</p>
       </div>
       <div class="operator">Signed in as <strong>${escapeHtml(email)}</strong></div>
     </section>
     <section class="stats" id="stats"></section>
-    <section class="invoice-list" id="invoice-list"><div class="loading">Loading invoice operations…</div></section>`, true)
+    <section class="invoice-list" id="invoice-list">
+      <div class="loading">Loading operations…</div>
+    </section>
+  `, true)
 
   try {
     const invoices = await listCoreInvoices()
-    const waiting = invoices.filter(i => i.status === 'awaiting_approval')
-    const sent = invoices.filter(i => i.status === 'sent' || i.send_status === 'sent')
-    const ready = invoices.filter(i => i.status === 'approved' && i.pdf_status === 'created' && i.send_status !== 'sent')
-    const visible = [...waiting, ...ready, ...sent].slice(0, 50)
+
+    const waiting = invoices.filter(invoice => invoice.status === 'awaiting_approval')
+    const ready = invoices.filter(invoice =>
+      invoice.status === 'approved' &&
+      invoice.pdf_status === 'created' &&
+      invoice.send_status !== 'sent'
+    )
+    const paymentSubmitted = invoices.filter(invoice =>
+      invoice.payment?.status === 'submitted'
+    )
+    const paid = invoices.filter(invoice =>
+      invoice.payment?.status === 'verified' ||
+      invoice.order?.payment_status === 'paid'
+    )
+
+    const visible = invoices.slice(0, 50)
 
     const stats = document.querySelector<HTMLDivElement>('#stats')
-    if (stats) stats.innerHTML = `
-      <div><span>Awaiting approval</span><strong>${waiting.length}</strong></div>
-      <div><span>Ready to send</span><strong>${ready.length}</strong></div>
-      <div><span>Sent</span><strong>${sent.length}</strong></div>`
+    if (stats) {
+      stats.innerHTML = `
+        <div><span>Awaiting approval</span><strong>${waiting.length}</strong></div>
+        <div><span>Ready to send</span><strong>${ready.length}</strong></div>
+        <div><span>Payment submitted</span><strong>${paymentSubmitted.length}</strong></div>
+        <div><span>Paid / processing</span><strong>${paid.length}</strong></div>
+      `
+    }
 
     const list = document.querySelector<HTMLDivElement>('#invoice-list')
-    if (list) list.innerHTML = visible.length ? visible.map(invoiceCard).join('') : '<div class="empty-state"><h2>Queue clear.</h2><p>No invoice operations need attention.</p></div>'
+    if (list) {
+      list.innerHTML = visible.length
+        ? visible.map(invoiceCard).join('')
+        : '<div class="empty-state"><h2>Queue clear.</h2><p>No invoice operations need attention.</p></div>'
+    }
 
     document.querySelectorAll<HTMLButtonElement>('.approve-button').forEach(button => {
       button.addEventListener('click', async () => {
         const invoiceId = button.dataset.id
         if (!invoiceId) return
-        const message = button.closest<HTMLElement>('.invoice-card')?.querySelector<HTMLParagraphElement>('.card-message')
+
+        const message = button.closest<HTMLElement>('.invoice-card')
+          ?.querySelector<HTMLParagraphElement>('.card-message')
+
         button.disabled = true
         button.textContent = 'Creating PDF…'
         if (message) message.textContent = 'Approving invoice and generating the Drive PDF…'
+
         try {
           await approveInvoice(invoiceId)
           await renderDashboard(email)
@@ -196,7 +382,9 @@ async function renderDashboard(email: string) {
         )
         if (!confirmed) return
 
-        const message = button.closest<HTMLElement>('.invoice-card')?.querySelector<HTMLParagraphElement>('.card-message')
+        const message = button.closest<HTMLElement>('.invoice-card')
+          ?.querySelector<HTMLParagraphElement>('.card-message')
+
         button.disabled = true
         button.textContent = 'Sending…'
         if (message) message.textContent = `Sending ${invoiceNumber} to ${recipient}…`
@@ -211,17 +399,94 @@ async function renderDashboard(email: string) {
         }
       })
     })
+
+    document.querySelectorAll<HTMLButtonElement>('.record-payment-button').forEach(button => {
+      button.addEventListener('click', async () => {
+        const orderId = button.dataset.orderId
+        const panel = button.closest<HTMLElement>('.payment-panel')
+        const provider = panel?.querySelector<HTMLSelectElement>('.payment-provider')?.value || ''
+        const reference = panel?.querySelector<HTMLInputElement>('.payment-reference')?.value.trim() || ''
+        const notes = panel?.querySelector<HTMLInputElement>('.payment-notes')?.value.trim() || ''
+        const message = button.closest<HTMLElement>('.invoice-card')
+          ?.querySelector<HTMLParagraphElement>('.card-message')
+
+        if (!orderId) return
+
+        if (!provider) {
+          if (message) message.textContent = 'Choose a payment method first.'
+          return
+        }
+
+        button.disabled = true
+        button.textContent = 'Recording…'
+        if (message) message.textContent = 'Recording payment submission…'
+
+        try {
+          await recordPayment(orderId, provider, reference, notes)
+          await renderDashboard(email)
+        } catch (error) {
+          if (message) message.textContent = error instanceof Error ? error.message : 'Payment recording failed'
+          button.disabled = false
+          button.textContent = 'Record Payment Submitted'
+        }
+      })
+    })
+
+    document.querySelectorAll<HTMLButtonElement>('.verify-payment-button').forEach(button => {
+      button.addEventListener('click', async () => {
+        const orderId = button.dataset.orderId
+        const invoiceNumber = button.dataset.number || 'this invoice'
+        if (!orderId) return
+
+        const confirmed = window.confirm(
+          `Verify payment for ${invoiceNumber}?\n\nThis marks the order PAID and moves it to PROCESSING. Only continue after you have independently confirmed the payment.`
+        )
+        if (!confirmed) return
+
+        const message = button.closest<HTMLElement>('.invoice-card')
+          ?.querySelector<HTMLParagraphElement>('.card-message')
+
+        button.disabled = true
+        button.textContent = 'Verifying…'
+        if (message) message.textContent = 'Verifying payment and moving the order to processing…'
+
+        try {
+          await verifyPayment(orderId)
+          await renderDashboard(email)
+        } catch (error) {
+          if (message) message.textContent = error instanceof Error ? error.message : 'Payment verification failed'
+          button.disabled = false
+          button.textContent = 'Verify Payment & Start Processing'
+        }
+      })
+    })
   } catch (error) {
     const list = document.querySelector<HTMLDivElement>('#invoice-list')
-    if (list) list.innerHTML = `<div class="empty-state error-state"><h2>Could not load Core.</h2><p>${escapeHtml(error instanceof Error ? error.message : 'Unknown error')}</p></div>`
+    if (list) {
+      list.innerHTML = `
+        <div class="empty-state error-state">
+          <h2>Could not load Core.</h2>
+          <p>${escapeHtml(error instanceof Error ? error.message : 'Unknown error')}</p>
+        </div>
+      `
+    }
   }
 }
 
 async function render() {
   const { data: { user } } = await supabase.auth.getUser()
-  if (!user) return renderLogin()
+
+  if (!user) {
+    renderLogin()
+    return
+  }
+
   const role = roleFor(user)
-  if (!isAdminRole(role)) return renderForbidden(user.email || 'Signed-in account')
+  if (!isAdminRole(role)) {
+    renderForbidden(user.email || 'Signed-in account')
+    return
+  }
+
   await renderDashboard(user.email || 'Core operator')
 }
 
