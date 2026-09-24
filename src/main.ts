@@ -5,6 +5,7 @@ import { bindCustomersPage, customersPageMarkup } from './customers-view'
 import { bindCatalogPage, catalogPageMarkup } from './catalog-view'
 import { bindDashboardPage, dashboardPageMarkup } from './dashboard-view'
 import { bindAuditPage, auditPageMarkup } from './audit-view'
+import { bindAnalyticsPage, analyticsPageMarkup } from './analytics-view'
 import {
   approveInvoice,
   listCoreInvoices,
@@ -43,7 +44,7 @@ const isAdminRole = (role: string) =>
   role === 'owner' || role === 'admin'
 
 function shell(content: string, signedIn = false) {
-  const activeView = location.hash === '#operations' ? 'operations' : location.hash === '#orders' ? 'orders' : location.hash === '#customers' ? 'customers' : location.hash === '#catalog' ? 'catalog' : location.hash === '#audit' ? 'audit' : 'dashboard'
+  const activeView = location.hash === '#operations' ? 'operations' : location.hash === '#orders' ? 'orders' : location.hash === '#customers' ? 'customers' : location.hash === '#catalog' ? 'catalog' : location.hash === '#analytics' ? 'analytics' : location.hash === '#audit' ? 'audit' : 'dashboard'
   const navigation = signedIn
     ? '<nav class="core-nav" aria-label="Core navigation">' +
       '<a href="#dashboard" class="' + (activeView === 'dashboard' ? 'active' : '') + '">Dashboard</a>' +
@@ -51,6 +52,7 @@ function shell(content: string, signedIn = false) {
       '<a href="#orders" class="' + (activeView === 'orders' ? 'active' : '') + '">Orders</a>' +
       '<a href="#customers" class="' + (activeView === 'customers' ? 'active' : '') + '">Customers</a>' +
       '<a href="#catalog" class="' + (activeView === 'catalog' ? 'active' : '') + '">Catalog</a>' +
+      '<a href="#analytics" class="' + (activeView === 'analytics' ? 'active' : '') + '">Analytics</a>' +
       '<a href="#audit" class="' + (activeView === 'audit' ? 'active' : '') + '">Audit</a>' +
       '</nav>'
     : ''
@@ -755,6 +757,11 @@ async function renderExecutiveDashboard(email: string) {
   await bindDashboardPage({ escapeHtml, money, dateTime })
 }
 
+async function renderAnalytics(email: string) {
+  shell(analyticsPageMarkup(email, escapeHtml), true)
+  await bindAnalyticsPage({ escapeHtml, money, dateTime })
+}
+
 async function renderAudit(email: string) {
   shell(auditPageMarkup(email, escapeHtml), true)
   await bindAuditPage({ escapeHtml, dateTime })
@@ -792,6 +799,11 @@ async function render() {
 
   if (location.hash === '#catalog') {
     await renderCatalog(email)
+    return
+  }
+
+  if (location.hash === '#analytics') {
+    await renderAnalytics(email)
     return
   }
 
