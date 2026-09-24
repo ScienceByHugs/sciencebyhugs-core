@@ -1,4 +1,4 @@
-import { loadCoreCustomers, updateCustomerContactPreference, updateCustomerMembership, updateCustomerNotes, type CoreCustomer, type CoreMembership } from './services/customers'
+import { loadCoreCustomers, updateCustomerAccountStatus, updateCustomerContactPreference, updateCustomerMembership, updateCustomerNotes, type CoreCustomer, type CoreMembership } from './services/customers'
 
 type Helpers = {
   escapeHtml: (value: unknown) => string
@@ -26,7 +26,10 @@ function customerCard(customer: CoreCustomer, memberships: CoreMembership[], hel
               escapeHtml(membership.name) + '</option>'
           ).join('') +
         '</select></label><p class="card-message membership-message" aria-live="polite"></p></div>' +
-        '<span class="account-pill">' + escapeHtml(customer.account_status) + '</span>' +
+        '<div class="account-status-control"><label><span>Account</span><select class="customer-account-status">' +
+          '<option value="Active"' + (customer.account_status.toLowerCase() === 'active' ? ' selected' : '') + '>Active</option>' +
+          '<option value="Suspended"' + (customer.account_status.toLowerCase() === 'suspended' ? ' selected' : '') + '>Suspended</option>' +
+        '</select></label><p class="card-message account-status-message" aria-live="polite"></p></div>' +
       '</div>' +
     '</div>' +
     '<div class="customer-metrics">' +
@@ -224,6 +227,43 @@ export async function bindCustomersPage(helpers: Helpers) {
         } catch (error) {
           select.value = previousMembership?.id || ''
           if (message) message.textContent = error instanceof Error ? error.message : 'Could not update membership.'
+        } finally {
+          select.disabled = false
+        }
+      })
+    })
+
+    document.querySelectorAll<HTMLSelectElement>('.customer-account-status').forEach(select => {
+      select.addEventListener('change', async () => {
+        const card = select.closest<HTMLElement>('.customer-card')
+        const customerId = card?.dataset.customerId
+        const message = card?.querySelector<HTMLParagraphElement>('.account-status-message')
+        if (!customerId) return
+        const customer = customers.find(item => item.id === customerId)
+        if (!customer) return
+
+        const previous = customer.account_status
+        const next = select.value as 'Active' | 'Suspended'
+        const confirmed = window.confirm(
+          next === 'Suspended'
+            ? 'Suspend ' + nameFor(customer) + '?\n\nThis blocks new Nexus checkout and invoice requests. The customer can still sign in and view their account/history.'
+            : 'Reactivate ' + nameFor(customer) + '?\n\nThis restores Nexus checkout access.'
+        )
+        if (!confirmed) {
+          select.value = previous.toLowerCase() === 'suspended' ? 'Suspended' : 'Active'
+          return
+        }
+
+        select.disabled = true
+        if (message) message.textContent = 'Saving audited account status…'
+        try {
+          const updated = await updateCustomerAccountStatus(customerId, next)
+          customer.account_status = updated.account_status
+          customer.updated_at = updated.updated_at
+          if (message) message.textContent = 'Saved. Audit event recorded.'
+        } catch (error) {
+          select.value = previous.toLowerCase() === 'suspended' ? 'Suspended' : 'Active'
+          if (message) message.textContent = error instanceof Error ? error.message : 'Could not update account status.'
         } finally {
           select.disabled = false
         }
