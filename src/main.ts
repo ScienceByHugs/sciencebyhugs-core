@@ -2,6 +2,7 @@ import './styles.css'
 import { supabase } from './services/supabase'
 import { bindOrdersPage, ordersPageMarkup } from './orders-view'
 import { bindCustomersPage, customersPageMarkup } from './customers-view'
+import { bindCatalogPage, catalogPageMarkup } from './catalog-view'
 import {
   approveInvoice,
   listCoreInvoices,
@@ -40,12 +41,13 @@ const isAdminRole = (role: string) =>
   role === 'owner' || role === 'admin'
 
 function shell(content: string, signedIn = false) {
-  const activeView = location.hash === '#orders' ? 'orders' : location.hash === '#customers' ? 'customers' : 'operations'
+  const activeView = location.hash === '#orders' ? 'orders' : location.hash === '#customers' ? 'customers' : location.hash === '#catalog' ? 'catalog' : 'operations'
   const navigation = signedIn
     ? '<nav class="core-nav" aria-label="Core navigation">' +
       '<a href="#operations" class="' + (activeView === 'operations' ? 'active' : '') + '">Operations</a>' +
       '<a href="#orders" class="' + (activeView === 'orders' ? 'active' : '') + '">Orders</a>' +
       '<a href="#customers" class="' + (activeView === 'customers' ? 'active' : '') + '">Customers</a>' +
+      '<a href="#catalog" class="' + (activeView === 'catalog' ? 'active' : '') + '">Catalog</a>' +
       '</nav>'
     : ''
 
@@ -739,6 +741,11 @@ async function renderCustomers(email: string) {
   await bindCustomersPage({ escapeHtml, money, dateTime })
 }
 
+async function renderCatalog(email: string) {
+  shell(catalogPageMarkup(email, escapeHtml), true)
+  await bindCatalogPage({ escapeHtml, money, dateTime })
+}
+
 async function render() {
   const { data: { user } } = await supabase.auth.getUser()
 
@@ -761,6 +768,11 @@ async function render() {
 
   if (location.hash === '#customers') {
     await renderCustomers(email)
+    return
+  }
+
+  if (location.hash === '#catalog') {
+    await renderCatalog(email)
     return
   }
 
