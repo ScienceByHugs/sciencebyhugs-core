@@ -32,36 +32,29 @@ export type CoreInvoice = {
   customer_name_snapshot: string | null
   customer_email_snapshot: string | null
   customer_phone_snapshot: string | null
+  send_status: string
+  sent_at: string | null
+  sent_to: string | null
   items: CoreInvoiceItem[]
 }
 
 export async function listCoreInvoices(): Promise<CoreInvoice[]> {
-  const { data, error } = await supabase.functions.invoke('core-invoices', {
-    body: {},
-  })
-
+  const { data, error } = await supabase.functions.invoke('core-invoices', { body: {} })
   if (error) throw error
   if (!data?.success) throw new Error(data?.error || 'Could not load invoices')
-
   return data.invoices || []
 }
 
 export async function approveInvoice(invoiceId: string) {
-  const { data, error } = await supabase.functions.invoke('approve-invoice', {
-    body: { invoiceId },
-  })
-
+  const { data, error } = await supabase.functions.invoke('approve-invoice', { body: { invoiceId } })
   if (error) throw error
   if (!data?.success) throw new Error(data?.error || 'Could not approve invoice')
+  return data
+}
 
-  return data as {
-    success: true
-    invoiceId: string
-    invoiceNumber: string
-    status: string
-    pdfStatus: string
-    pdfUrl: string
-    pdfCreatedAt: string
-    alreadyApproved?: boolean
-  }
+export async function sendInvoice(invoiceId: string) {
+  const { data, error } = await supabase.functions.invoke('send-invoice', { body: { invoiceId } })
+  if (error) throw error
+  if (!data?.success) throw new Error(data?.error || 'Could not send invoice')
+  return data
 }
