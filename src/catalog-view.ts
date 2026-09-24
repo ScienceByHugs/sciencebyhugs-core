@@ -1,4 +1,4 @@
-import { loadCoreCatalog, type CoreCatalogProduct } from './services/catalog'
+import { loadCoreCatalog, updateCatalogMetadata, type CoreCatalogProduct } from './services/catalog'
 
 type Helpers = {
   escapeHtml: (value: unknown) => string
@@ -36,6 +36,19 @@ function productCard(product: CoreCatalogProduct, helpers: Helpers) {
     (product.coa_url
       ? '<div class="invoice-actions"><a class="button secondary" href="' + escapeHtml(product.coa_url) + '" target="_blank" rel="noreferrer">Open COA</a></div>'
       : '') +
+    '<details class="catalog-editor"><summary>Edit persistent metadata</summary>' +
+      '<p class="catalog-editor-note">Category, name, price, storefront status, and sourcing are Google-sync managed and read-only here.</p>' +
+      '<div class="catalog-editor-grid">' +
+        '<label><span>Product code</span><input class="catalog-product-code" maxlength="120" value="' + escapeHtml(product.product_code || '') + '"></label>' +
+        '<label><span>Research name</span><input class="catalog-research-name" maxlength="200" value="' + escapeHtml(product.research_name || '') + '"></label>' +
+        '<label><span>Purity</span><input class="catalog-purity" maxlength="120" value="' + escapeHtml(product.purity || '') + '"></label>' +
+        '<label><span>Quantity</span><input class="catalog-quantity" maxlength="120" value="' + escapeHtml(product.quantity || '') + '"></label>' +
+        '<label><span>Lot number</span><input class="catalog-lot-number" maxlength="120" value="' + escapeHtml(product.lot_number || '') + '"></label>' +
+        '<label class="catalog-span-2"><span>COA URL</span><input class="catalog-coa-url" type="url" maxlength="1000" value="' + escapeHtml(product.coa_url || '') + '"></label>' +
+      '</div>' +
+      '<div class="catalog-editor-actions"><p class="card-message catalog-editor-message" aria-live="polite"></p>' +
+      '<button class="secondary save-catalog-metadata" type="button">Save Metadata</button></div>' +
+    '</details>' +
   '</article>'
 }
 
@@ -129,6 +142,57 @@ export async function bindCatalogPage(helpers: Helpers) {
       const summary = document.querySelector<HTMLParagraphElement>('#catalog-summary')
       if (summary) summary.textContent = shown + ' of ' + products.length + ' products shown.'
     }
+
+    document.querySelectorAll<HTMLButtonElement>('.save-catalog-metadata').forEach(button => {
+      button.addEventListener('click', async () => {
+        const card = button.closest<HTMLElement>('.catalog-card')
+        const productId = card?.dataset.productId
+        const message = card?.querySelector<HTMLParagraphElement>('.catalog-editor-message')
+        if (!productId) return
+
+        const product = products.find(item => item.id === productId)
+        if (!product) return
+
+        const value = (selector: string) =>
+          card?.querySelector<HTMLInputElement>(selector)?.value.trim() || ''
+
+        const payload = {
+          productCode: value('.catalog-product-code'),
+          researchName: value('.catalog-research-name'),
+          purity: value('.catalog-purity'),
+          quantity: value('.catalog-quantity'),
+          lotNumber: value('.catalog-lot-number'),
+          coaUrl: value('.catalog-coa-url'),
+        }
+
+        button.disabled = true
+        button.textContent = 'Saving…'
+        if (message) message.textContent = 'Saving audited catalog metadata…'
+
+        try {
+          const updated = await updateCatalogMetadata(productId, payload)
+          product.product_code = updated.product_code
+          product.research_name = updated.research_name
+          product.purity = updated.purity
+          product.quantity = updated.quantity
+          product.lot_number = updated.lot_number
+          product.coa_url = updated.coa_url
+          product.updated_at = updated.updated_at
+
+          const identifier = updated.product_code || product.sku || product.source_key || 'No code'
+          const eyebrow = card.querySelector<HTMLElement>('.catalog-card-head .eyebrow')
+          if (eyebrow) eyebrow.textContent = identifier
+
+          if (message) message.textContent = 'Saved. Audit event recorded.'
+          apply()
+        } catch (error) {
+          if (message) message.textContent = error instanceof Error ? error.message : 'Could not save metadata.'
+        } finally {
+          button.disabled = false
+          button.textContent = 'Save Metadata'
+        }
+      })
+    })
 
     document.querySelector<HTMLInputElement>('#catalog-search')?.addEventListener('input', event => {
       search = (event.currentTarget as HTMLInputElement).value.trim().toLowerCase()
