@@ -1,4 +1,4 @@
-import { listCoreCustomers, type CoreCustomer } from './services/customers'
+import { listCoreCustomers, updateCustomerNotes, type CoreCustomer } from './services/customers'
 
 type Helpers = {
   escapeHtml: (value: unknown) => string
@@ -43,7 +43,13 @@ function customerCard(customer: CoreCustomer, helpers: Helpers) {
             escapeHtml(order.status) + '</span><strong>' + money(order.total) + '</strong></a>'
         ).join('') + '</div>'
       : '') +
-    (customer.notes ? '<div class="order-note"><span>Internal notes</span><p>' + escapeHtml(customer.notes) + '</p></div>' : '') +
+    '<div class="customer-notes-editor">' +
+      '<label><span>Internal notes</span><textarea class="customer-notes-input" maxlength="2000" placeholder="Add internal customer context…">' +
+        escapeHtml(customer.notes || '') +
+      '</textarea></label>' +
+      '<div class="customer-notes-actions"><p class="card-message customer-notes-message" aria-live="polite"></p>' +
+      '<button class="secondary save-customer-notes" type="button">Save Notes</button></div>' +
+    '</div>' +
   '</article>'
 }
 
@@ -107,6 +113,38 @@ export async function bindCustomersPage(helpers: Helpers) {
       membership = (event.currentTarget as HTMLSelectElement).value
       apply()
     })
+
+    document.querySelectorAll<HTMLButtonElement>('.save-customer-notes').forEach(button => {
+      button.addEventListener('click', async () => {
+        const card = button.closest<HTMLElement>('.customer-card')
+        const customerId = card?.dataset.customerId
+        const textarea = card?.querySelector<HTMLTextAreaElement>('.customer-notes-input')
+        const message = card?.querySelector<HTMLParagraphElement>('.customer-notes-message')
+
+        if (!customerId || !textarea) return
+
+        const customer = customers.find(item => item.id === customerId)
+        if (!customer) return
+
+        button.disabled = true
+        button.textContent = 'Saving…'
+        if (message) message.textContent = 'Saving audited note…'
+
+        try {
+          const updated = await updateCustomerNotes(customerId, textarea.value)
+          customer.notes = updated.notes
+          customer.updated_at = updated.updated_at
+          textarea.value = updated.notes || ''
+          if (message) message.textContent = 'Saved. Audit event recorded.'
+        } catch (error) {
+          if (message) message.textContent = error instanceof Error ? error.message : 'Could not save notes.'
+        } finally {
+          button.disabled = false
+          button.textContent = 'Save Notes'
+        }
+      })
+    })
+
     apply()
   } catch (error) {
     list.innerHTML = '<div class="empty-state error-state"><h2>Could not load customers.</h2><p>' +
