@@ -13,19 +13,19 @@ export default defineConfig({
         clientsClaim: true,
         skipWaiting: true,
       },
-      includeAssets: ['brand-mark.svg'],
+      includeAssets: ['brand/science-by-hugs.svg', 'brand/sbh-monogram.svg', 'brand/core.svg'],
       manifest: {
         name: 'Science By HUGs Core',
         short_name: 'Core',
         description: 'Internal operations and administration PWA for Science By HUGs.',
-        theme_color: '#050505',
-        background_color: '#050505',
+        theme_color: '#0A0A0B',
+        background_color: '#0A0A0B',
         display: 'standalone',
         start_url: base,
         scope: base,
         icons: [
           {
-            src: `${base}brand-mark.svg`,
+            src: `${base}brand/sbh-monogram.svg`,
             sizes: 'any',
             type: 'image/svg+xml',
             purpose: 'any maskable'
