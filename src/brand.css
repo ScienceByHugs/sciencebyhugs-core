@@ -23,3 +23,11 @@ button,.button,.core-nav,.queue-tab,.status-pill,input,select,textarea{border-co
 .primary{background:linear-gradient(135deg,var(--sbh-cobalt),var(--sbh-cyan));color:#02070c;box-shadow:0 0 24px rgba(0,87,255,.16)}
 .secondary,.core-nav a.active,.queue-tab.active{color:var(--sbh-white);border-color:rgba(0,210,255,.3)}
 .eyebrow,.status,.tagline,.totals .grand,.membership-pill{color:var(--sbh-cyan)}
+
+.core-login-lockup{display:block;width:min(360px,92%);height:auto;margin:0 0 20px}
+.stats>div,.payment-panel,.fulfillment-panel,.catalog-metrics>div,.customer-metrics>div,.customer-details>div,
+.order-meta-grid>div,.order-timeline>div,.referral-kpis>div,.notification-kpis>div,
+.line-item,.order-line,.customer-order-row,.finance-row,.referral-row{
+  border-color:rgba(0,210,255,.13);
+}
+.core-nav{background:rgba(13,17,23,.86)}
