@@ -1,4 +1,5 @@
 import './styles.css'
+import './brand.css'
 import { supabase } from './services/supabase'
 import { bindOrdersPage, ordersPageMarkup } from './orders-view'
 import { bindCustomersPage, customersPageMarkup } from './customers-view'
@@ -23,6 +24,7 @@ import {
 const appRoot = document.querySelector<HTMLDivElement>('#app')
 if (!appRoot) throw new Error('App root not found')
 const app = appRoot
+const coreLogoUrl = `${import.meta.env.BASE_URL}brand/core.svg`
 
 const money = (value: number | string | null | undefined) =>
   new Intl.NumberFormat('en-US', {
@@ -133,9 +135,8 @@ function shell(content: string, signedIn = false) {
     <a class="skip-link" href="#core-content">Skip to content</a>
     <main class="shell">
       <header class="commandbar">
-        <div>
-          <span class="eyebrow">SCIENCE BY HUGs</span>
-          <strong>CORE</strong>
+        <div class="core-brand">
+          <img class="core-brand-lockup" src="${coreLogoUrl}" alt="Core — Science By Hugs" />
         </div>
         <div class="command-actions">
           ${navigation}
@@ -156,6 +157,7 @@ function renderLogin(message = '') {
   shell(`
     <section class="login-wrap">
       <div class="login-card">
+        <img class="core-login-lockup" src="${coreLogoUrl}" alt="Core — Science By Hugs" />
         <span class="eyebrow">AUTHORIZED PERSONNEL</span>
         <h1 class="login-title">CORE</h1>
         <p class="tagline">Control. Operate. Manage.</p>
