@@ -1875,3 +1875,39 @@ body{
   .core-quick-grid{grid-template-columns:repeat(2,minmax(0,1fr))}
   .core-bottom-insights{grid-template-columns:1fr 1fr}
 }
+
+
+/* Manual catalog sync */
+.catalog-sync-now-card{
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+  gap:18px;
+  margin-bottom:12px;
+  padding:16px 18px;
+  border:1px solid rgba(32,201,255,.22);
+  border-radius:14px;
+  background:linear-gradient(135deg,rgba(0,87,255,.10),rgba(7,17,27,.92));
+}
+.catalog-sync-now-card h2{margin:5px 0 4px;font-size:1rem}
+.catalog-sync-now-card p{margin:0;color:var(--muted);font-size:.72rem;line-height:1.45}
+.catalog-sync-now-actions{
+  display:flex;
+  align-items:center;
+  gap:10px;
+  flex:0 0 auto;
+}
+.catalog-sync-now-actions span{
+  max-width:280px;
+  color:#8fb4ca;
+  font-size:.65rem;
+  text-align:right;
+  line-height:1.35;
+}
+.catalog-sync-now-actions button{white-space:nowrap}
+@media(max-width:700px){
+  .catalog-sync-now-card{display:grid;padding:14px}
+  .catalog-sync-now-actions{display:grid;gap:8px}
+  .catalog-sync-now-actions span{max-width:none;text-align:left}
+  .catalog-sync-now-actions button{width:100%}
+}
