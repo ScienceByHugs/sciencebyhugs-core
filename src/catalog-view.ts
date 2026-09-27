@@ -1,4 +1,4 @@
-import { loadCoreCatalog, syncCatalogNow, updateCatalogMetadata, type CoreCatalogProduct } from './services/catalog'
+import { loadCoreCatalog, setCatalogVisibility, syncCatalogNow, updateCatalogMetadata, type CoreCatalogProduct } from './services/catalog'
 
 type Helpers = {
   escapeHtml: (value: unknown) => string
@@ -18,6 +18,7 @@ function productCard(product: CoreCatalogProduct, helpers: Helpers) {
         escapeHtml(product.category?.name || 'No category') + '</p></div>' +
       '<div class="catalog-tags">' +
         '<span class="catalog-status ' + (product.active ? 'active' : 'inactive') + '">' + (product.active ? 'Active' : 'Inactive') + '</span>' +
+        (product.core_hidden ? '<span class="catalog-status inactive">Hidden from Nexus</span>' : '') +
         '<span class="catalog-storefront">' + escapeHtml(product.storefront_status || 'No storefront status') + '</span>' +
       '</div>' +
     '</div>' +
@@ -33,9 +34,15 @@ function productCard(product: CoreCatalogProduct, helpers: Helpers) {
       '<span>Quantity <strong>' + escapeHtml(product.quantity || '—') + '</strong></span>' +
       '<span>Lot <strong>' + escapeHtml(product.lot_number || '—') + '</strong></span>' +
     '</div>' +
-    (product.coa_url
-      ? '<div class="invoice-actions"><a class="button secondary" href="' + escapeHtml(product.coa_url) + '" target="_blank" rel="noreferrer">Open COA</a></div>'
-      : '') +
+    '<div class="invoice-actions">' +
+      (product.coa_url
+        ? '<a class="button secondary" href="' + escapeHtml(product.coa_url) + '" target="_blank" rel="noreferrer">Open COA</a>'
+        : '') +
+      '<button class="secondary toggle-catalog-visibility" type="button">' +
+        (product.core_hidden ? 'Enable on Nexus' : 'Disable on Nexus') +
+      '</button>' +
+      '<span class="card-message catalog-visibility-message" aria-live="polite"></span>' +
+    '</div>' +
     '<details class="catalog-editor"><summary>Edit Core metadata overlay</summary>' +
       '<p class="catalog-editor-note">Vendor-synced fields stay read-only. These Core metadata fields are separate and persist across vendor catalog syncs.</p>' +
       '<div class="catalog-editor-grid">' +
@@ -120,7 +127,8 @@ export async function bindCatalogPage(helpers: Helpers) {
       metricEl.innerHTML =
         '<div><span>Total</span><strong>' + metrics.total + '</strong></div>' +
         '<div><span>Active</span><strong>' + metrics.active + '</strong></div>' +
-        '<div><span>Available</span><strong>' + metrics.available + '</strong></div>' +
+        '<div><span>Available on Nexus</span><strong>' + metrics.available + '</strong></div>' +
+        '<div><span>Hidden by Core</span><strong>' + metrics.hidden + '</strong></div>' +
         '<div><span>Metadata complete</span><strong>' + metrics.metadata_complete + '/' + metrics.active + '</strong></div>' +
         '<div><span>Completeness</span><strong>' + metrics.metadata_completeness_percent + '%</strong></div>' +
         '<div><span>Work queue</span><strong>' + metrics.action_queue + '</strong></div>' +
@@ -263,7 +271,7 @@ export async function bindCatalogPage(helpers: Helpers) {
         const stateMatch =
           state === 'all' ||
           (state === 'active' && product.active) ||
-          (state === 'inactive' && !product.active) ||
+          (state === 'inactive' && (!product.active || product.core_hidden)) ||
           (state === 'metadata-incomplete' && metadataQueueIds.has(product.id)) ||
           (state === 'coa-missing' && !product.coa_url) ||
           (state === 'vendor-discrepancy' && discrepancyIds.has(product.id)) ||
@@ -276,6 +284,41 @@ export async function bindCatalogPage(helpers: Helpers) {
       const summary = document.querySelector<HTMLParagraphElement>('#catalog-summary')
       if (summary) summary.textContent = shown + ' of ' + products.length + ' products shown.'
     }
+
+    document.querySelectorAll<HTMLButtonElement>('.toggle-catalog-visibility').forEach(button => {
+      button.addEventListener('click', async () => {
+        const card = button.closest<HTMLElement>('.catalog-card')
+        const productId = card?.dataset.productId
+        const message = card?.querySelector<HTMLSpanElement>('.catalog-visibility-message')
+        if (!productId) return
+
+        const product = products.find(item => item.id === productId)
+        if (!product) return
+
+        const nextHidden = !product.core_hidden
+        button.disabled = true
+        button.textContent = nextHidden ? 'Disabling…' : 'Enabling…'
+        if (message) message.textContent = nextHidden
+          ? 'Hiding product from Nexus…'
+          : 'Restoring product to Nexus…'
+
+        try {
+          const updated = await setCatalogVisibility(productId, nextHidden)
+          product.core_hidden = updated.core_hidden
+          product.updated_at = updated.updated_at
+          if (message) message.textContent = updated.core_hidden
+            ? 'Disabled on Nexus. Audit event recorded.'
+            : 'Enabled on Nexus. Audit event recorded.'
+          await bindCatalogPage(helpers)
+        } catch (error) {
+          if (message) message.textContent = error instanceof Error
+            ? error.message
+            : 'Could not update storefront visibility.'
+          button.disabled = false
+          button.textContent = product.core_hidden ? 'Enable on Nexus' : 'Disable on Nexus'
+        }
+      })
+    })
 
     document.querySelectorAll<HTMLButtonElement>('.save-catalog-metadata').forEach(button => {
       button.addEventListener('click', async () => {
