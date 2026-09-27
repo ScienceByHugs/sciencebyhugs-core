@@ -13,7 +13,7 @@ export default defineConfig({
         clientsClaim: true,
         skipWaiting: true,
       },
-      includeAssets: ['brand/science-by-hugs.svg', 'brand/sbh-monogram.svg', 'brand/core.svg'],
+      includeAssets: ['brand/science-by-hugs.svg', 'brand/sbh-monogram.svg', 'brand/core.svg', 'brand/core-app-icon.svg'],
       manifest: {
         name: 'Science By HUGs Core',
         short_name: 'Core',
@@ -25,10 +25,16 @@ export default defineConfig({
         scope: base,
         icons: [
           {
-            src: `${base}brand/sbh-monogram.svg`,
+            src: `${base}brand/core-app-icon.svg`,
             sizes: 'any',
             type: 'image/svg+xml',
-            purpose: 'any maskable'
+            purpose: 'any'
+          },
+          {
+            src: `${base}brand/core-app-icon.svg`,
+            sizes: 'any',
+            type: 'image/svg+xml',
+            purpose: 'maskable'
           }
         ]
       }
