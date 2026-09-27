@@ -558,29 +558,35 @@ async function renderOperations(email: string) {
   let activeQueue = resolveOperationsQueue()
 
   shell(`
-    <section class="dashboard-head">
+    <section class="dashboard-head dashboard-head-compact">
       <div>
-        <span class="eyebrow">INVOICE + PAYMENT OPERATIONS</span>
-        <h1 class="dashboard-title">Operations Control</h1>
-        <p class="copy">Manage direct checkout orders, approve emailed invoices, review payment submissions, and control fulfillment.</p>
+        <span class="eyebrow">OPERATIONS</span>
+        <h1 class="dashboard-title">Operations</h1>
+        <p class="copy">Work the live queue: invoices, payments, and fulfillment from one operational workspace.</p>
       </div>
       <div class="operator">Signed in as <strong>${escapeHtml(email)}</strong></div>
     </section>
-    <section class="stats" id="stats"></section>
-    <section class="queue-toolbar" aria-label="Operations queue controls">
-      <div class="queue-tabs" id="queue-tabs">
-        <button class="queue-tab ${activeQueue === 'attention' ? 'active' : ''}" type="button" data-queue="attention">Needs attention</button>
+    <section class="stats operations-stats" id="stats"></section>
+    <section class="operations-controls" aria-label="Operations queue controls">
+      <div class="operations-controls-top">
+        <div>
+          <span class="eyebrow">WORK QUEUE</span>
+          <h2>What do you need to work?</h2>
+        </div>
+        <label class="queue-search operations-search">
+          <span class="sr-only">Search operations</span>
+          <input id="queue-search" type="search" placeholder="Search customer, invoice, order…" autocomplete="off">
+        </label>
+      </div>
+      <div class="queue-tabs operations-tabs" id="queue-tabs">
+        <button class="queue-tab ${activeQueue === 'attention' ? 'active' : ''}" type="button" data-queue="attention">Priority</button>
         <button class="queue-tab ${activeQueue === 'approval' ? 'active' : ''}" type="button" data-queue="approval">Invoices</button>
         <button class="queue-tab ${activeQueue === 'payment' ? 'active' : ''}" type="button" data-queue="payment">Payments</button>
         <button class="queue-tab ${activeQueue === 'fulfillment' ? 'active' : ''}" type="button" data-queue="fulfillment">Fulfillment</button>
-        <button class="queue-tab ${activeQueue === 'all' ? 'active' : ''}" type="button" data-queue="all">All</button>
+        <button class="queue-tab ${activeQueue === 'all' ? 'active' : ''}" type="button" data-queue="all">All activity</button>
       </div>
-      <label class="queue-search">
-        <span class="sr-only">Search operations</span>
-        <input id="queue-search" type="search" placeholder="Search customer, invoice, order…" autocomplete="off">
-      </label>
+      <p class="queue-summary" id="queue-summary" aria-live="polite"></p>
     </section>
-    <p class="queue-summary" id="queue-summary" aria-live="polite"></p>
     <section class="invoice-list" id="invoice-list">
       <div class="loading">Loading operations…</div>
     </section>
@@ -609,10 +615,10 @@ async function renderOperations(email: string) {
     const stats = document.querySelector<HTMLDivElement>('#stats')
     if (stats) {
       stats.innerHTML = `
-        <div><span>Awaiting approval</span><strong>${waiting.length}</strong></div>
-        <div><span>Ready to send</span><strong>${ready.length}</strong></div>
-        <div><span>Payment submitted</span><strong>${paymentSubmitted.length}</strong></div>
-        <div><span>Paid / processing</span><strong>${paid.length}</strong></div>
+        <div><span>Needs approval</span><strong>${waiting.length}</strong><small>Invoices waiting</small></div>
+        <div><span>Ready to send</span><strong>${ready.length}</strong><small>Approved PDFs</small></div>
+        <div><span>Payments to verify</span><strong>${paymentSubmitted.length}</strong><small>Submitted payments</small></div>
+        <div><span>Paid orders</span><strong>${paid.length}</strong><small>Recorded paid</small></div>
       `
     }
 
