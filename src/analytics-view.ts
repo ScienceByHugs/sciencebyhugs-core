@@ -56,7 +56,7 @@ function rankRows(
 }
 
 export function analyticsPageMarkup(email: string, escapeHtml: Helpers['escapeHtml']) {
-  return '<section class="dashboard-head"><div>' +
+  return '<section class="dashboard-head dashboard-head-compact"><div>' +
     '<span class="eyebrow">BUSINESS INTELLIGENCE</span><h1 class="dashboard-title">Analytics</h1>' +
     '<p class="copy">Revenue, customer growth, order behavior, referrals, memberships, and product performance from live Core data.</p>' +
     '</div><div class="operator">Signed in as <strong>' + escapeHtml(email) + '</strong></div></section>' +
