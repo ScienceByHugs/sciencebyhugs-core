@@ -90,7 +90,7 @@ function customerCard(customer: CoreCustomer, memberships: CoreMembership[], hel
 }
 
 export function customersPageMarkup(email: string, escapeHtml: Helpers['escapeHtml']) {
-  return '<section class="dashboard-head"><div>' +
+  return '<section class="dashboard-head dashboard-head-compact"><div>' +
     '<span class="eyebrow">CUSTOMER OPERATIONS</span><h1 class="dashboard-title">Customers</h1>' +
     '<p class="copy">Customer relationships, memberships, order value, referrals, rewards, and internal context.</p>' +
     '</div><div class="operator">Signed in as <strong>' + escapeHtml(email) + '</strong></div></section>' +
