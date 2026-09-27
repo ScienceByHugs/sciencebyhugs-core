@@ -796,3 +796,300 @@ button:disabled{cursor:not-allowed;opacity:.58}
   .invoice-card,.analytics-panel,.finance-panel,.referral-panel,.admin-panel,.notification-panel,.audit-card,.catalog-ops-panel,.catalog-queue-panel{border-radius:16px}
   .loading,.empty-state{padding:30px 18px}
 }
+
+
+/* CORE responsive workspace overhaul */
+.core-app-shell{
+  min-height:100vh;
+  display:grid;
+  grid-template-columns:248px minmax(0,1fr);
+  background:
+    radial-gradient(circle at 75% -10%,color-mix(in srgb,var(--primary) 10%,transparent),transparent 34rem),
+    var(--bg);
+}
+.core-sidebar{
+  position:sticky;
+  top:0;
+  height:100vh;
+  display:flex;
+  flex-direction:column;
+  gap:22px;
+  padding:24px 18px 18px;
+  border-right:1px solid color-mix(in srgb,var(--primary) 22%,transparent);
+  background:rgba(7,7,7,.94);
+  backdrop-filter:blur(18px);
+  -webkit-backdrop-filter:blur(18px);
+  overflow-y:auto;
+  z-index:90;
+}
+.core-sidebar-brand{
+  min-height:54px;
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+  gap:12px;
+  padding:0 8px 14px;
+  border-bottom:1px solid #24211b;
+}
+.core-sidebar .core-brand-lockup{width:min(174px,100%);height:auto;display:block}
+.core-nav-close{display:none}
+.core-nav{
+  display:grid;
+  gap:22px;
+  width:100%;
+  max-width:none;
+  overflow:visible;
+}
+.core-nav-group{display:grid;gap:5px}
+.core-nav-label{
+  padding:0 10px 5px;
+  color:#746f64;
+  font-size:.61rem;
+  font-weight:900;
+  letter-spacing:.18em;
+  text-transform:uppercase;
+}
+.core-nav a{
+  min-height:42px;
+  display:flex;
+  align-items:center;
+  padding:0 12px;
+  border:1px solid transparent;
+  border-radius:12px;
+  color:var(--muted);
+  text-decoration:none;
+  font-size:.82rem;
+  font-weight:750;
+  letter-spacing:.01em;
+  transition:background .18s ease,border-color .18s ease,color .18s ease,transform .18s ease;
+}
+.core-nav a:hover{
+  color:var(--text);
+  background:rgba(255,255,255,.035);
+  border-color:#2b2821;
+  transform:translateX(2px);
+}
+.core-nav a.active,
+.core-nav a[aria-current="page"]{
+  color:var(--text);
+  border-color:color-mix(in srgb,var(--primary) 44%,#2c281f);
+  background:linear-gradient(90deg,color-mix(in srgb,var(--primary) 13%,transparent),rgba(255,255,255,.025));
+  box-shadow:inset 3px 0 0 var(--primary);
+}
+.core-sidebar-footer{
+  margin-top:auto;
+  display:grid;
+  gap:10px;
+  padding:15px 8px 2px;
+  border-top:1px solid #24211b;
+}
+.core-system-state{
+  display:flex;
+  align-items:center;
+  gap:8px;
+  color:var(--muted);
+  font-size:.63rem;
+  font-weight:900;
+  letter-spacing:.12em;
+}
+.core-system-state i,
+.core-mobile-state i{
+  width:8px;
+  height:8px;
+  border-radius:999px;
+  background:var(--success);
+  box-shadow:0 0 12px color-mix(in srgb,var(--success) 70%,transparent);
+}
+.core-sign-out{width:100%;justify-content:flex-start;padding-left:10px}
+.core-workspace{min-width:0;width:100%}
+.core-content-shell{
+  width:min(1440px,calc(100% - 64px));
+  margin:0 auto;
+  padding:18px 0 72px;
+}
+.core-mobile-bar{display:none}
+.core-nav-backdrop{display:none}
+
+/* Make page headers feel like an admin workspace rather than a hero landing page. */
+.core-content-shell .dashboard-head{
+  padding:34px 0 22px;
+  align-items:flex-end;
+}
+.core-content-shell .dashboard-title{
+  font-size:clamp(2.35rem,5vw,4.4rem);
+}
+.core-content-shell .copy{font-size:.94rem;line-height:1.58}
+
+/* Better density on desktop while preserving scanability. */
+@media(min-width:1180px){
+  .core-content-shell .executive-kpis{grid-template-columns:repeat(6,minmax(0,1fr))}
+  .core-content-shell .finance-kpis{grid-template-columns:repeat(6,minmax(0,1fr))}
+  .core-content-shell .notification-kpis{grid-template-columns:repeat(4,minmax(0,1fr))}
+}
+
+/* Tablet / mobile navigation drawer */
+@media(max-width:900px){
+  .core-app-shell{display:block;min-height:100vh}
+  .core-sidebar{
+    position:fixed;
+    inset:0 auto 0 0;
+    width:min(320px,88vw);
+    height:100dvh;
+    transform:translateX(-105%);
+    transition:transform .22s ease;
+    box-shadow:24px 0 80px rgba(0,0,0,.52);
+    z-index:120;
+  }
+  .core-nav-open .core-sidebar{transform:translateX(0)}
+  .core-nav-close{
+    width:40px;
+    height:40px;
+    display:grid;
+    place-items:center;
+    padding:0;
+    border-radius:11px;
+    border:1px solid #302c23;
+    background:#0d0d0d;
+    color:var(--text);
+    font-size:1.35rem;
+  }
+  .core-nav-backdrop{
+    position:fixed;
+    inset:0;
+    z-index:110;
+    display:block;
+    border:0;
+    border-radius:0;
+    padding:0;
+    background:rgba(0,0,0,.65);
+    opacity:0;
+    pointer-events:none;
+    transition:opacity .22s ease;
+  }
+  .core-nav-open .core-nav-backdrop{opacity:1;pointer-events:auto}
+  .core-nav-open{overflow:hidden}
+  .core-mobile-bar{
+    position:sticky;
+    top:0;
+    z-index:70;
+    min-height:64px;
+    display:grid;
+    grid-template-columns:auto 1fr auto;
+    align-items:center;
+    gap:12px;
+    padding:max(10px,env(safe-area-inset-top)) 16px 10px;
+    border-bottom:1px solid color-mix(in srgb,var(--primary) 24%,transparent);
+    background:rgba(6,6,6,.9);
+    backdrop-filter:blur(18px);
+    -webkit-backdrop-filter:blur(18px);
+  }
+  .core-menu-button{
+    min-height:42px;
+    gap:8px;
+    padding:0 12px;
+    border-radius:11px;
+    background:#111;
+    color:var(--text);
+    font-size:.78rem;
+    font-weight:800;
+  }
+  .core-menu-button span{font-size:1rem}
+  .core-mobile-logo{
+    justify-self:center;
+    width:min(142px,46vw);
+    height:auto;
+  }
+  .core-mobile-state{
+    width:34px;
+    height:34px;
+    display:grid;
+    place-items:center;
+    border:1px solid #2d2a23;
+    border-radius:10px;
+    background:#0d0d0d;
+  }
+  .core-content-shell{
+    width:min(100% - 28px,900px);
+    padding:4px 0 max(48px,env(safe-area-inset-bottom));
+  }
+  .core-content-shell .dashboard-head{padding:28px 0 18px}
+  .core-content-shell .dashboard-title{font-size:clamp(2.15rem,10vw,3.4rem)}
+}
+
+/* Phone-first data presentation and touch targets */
+@media(max-width:620px){
+  .core-content-shell{width:min(100% - 22px,900px)}
+  .core-content-shell .dashboard-head{padding-top:22px}
+  .core-content-shell .operator{
+    margin-top:9px;
+    padding:0;
+    font-size:.74rem;
+  }
+  .core-content-shell .copy{font-size:.88rem}
+  .executive-kpis,
+  .finance-kpis,
+  .notification-kpis,
+  .analytics-headline,
+  .analytics-period-kpis,
+  .referral-kpis,
+  .catalog-ops-stats,
+  .catalog-missing-grid{
+    grid-template-columns:repeat(2,minmax(0,1fr))!important;
+    gap:8px!important;
+  }
+  .executive-kpis>div,
+  .finance-kpis>div,
+  .notification-kpis>div,
+  .analytics-headline>div,
+  .analytics-period-kpis>div,
+  .referral-kpis>div{
+    padding:13px!important;
+    border-radius:14px!important;
+  }
+  .dashboard-columns,
+  .finance-columns,
+  .analytics-columns,
+  .admin-columns{gap:10px!important}
+  .dashboard-panel,
+  .finance-panel,
+  .analytics-panel,
+  .referral-panel,
+  .admin-panel,
+  .notification-panel,
+  .catalog-ops-panel,
+  .catalog-queue-panel{
+    padding:14px!important;
+    border-radius:15px!important;
+  }
+  .dashboard-section-head{gap:8px;align-items:flex-start}
+  .dashboard-section-head h2{font-size:1rem}
+  .dashboard-list-row{gap:8px}
+  .invoice-card,.order-card{padding:16px!important;border-radius:17px!important}
+  .invoice-actions,.admin-template-actions{gap:8px}
+  button,.button,.queue-tab{min-height:44px}
+}
+
+@media(max-width:420px){
+  .core-menu-button b{display:none}
+  .core-menu-button{width:42px;padding:0}
+  .core-mobile-logo{width:132px}
+  .executive-kpis,
+  .finance-kpis,
+  .notification-kpis,
+  .analytics-headline,
+  .analytics-period-kpis,
+  .referral-kpis,
+  .catalog-ops-stats,
+  .catalog-missing-grid{
+    grid-template-columns:1fr!important;
+  }
+  .dashboard-title{letter-spacing:-.045em}
+}
+
+/* Custom-domain login shell remains centered and simple. */
+.login-shell{width:min(1180px,calc(100% - 40px));margin:0 auto;padding:34px 0 70px}
+.login-commandbar{position:static;background:transparent}
+@media(max-width:760px){
+  .login-shell{width:min(100% - 28px,1180px);padding-top:20px}
+  .login-commandbar{display:flex;align-items:center}
+}
