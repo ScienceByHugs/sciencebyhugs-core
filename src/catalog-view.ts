@@ -1,4 +1,4 @@
-import { loadCoreCatalog, updateCatalogMetadata, type CoreCatalogProduct } from './services/catalog'
+import { loadCoreCatalog, syncCatalogNow, updateCatalogMetadata, type CoreCatalogProduct } from './services/catalog'
 
 type Helpers = {
   escapeHtml: (value: unknown) => string
@@ -57,6 +57,12 @@ export function catalogPageMarkup(email: string, escapeHtml: Helpers['escapeHtml
     '<span class="eyebrow">PRODUCT OPERATIONS</span><h1 class="dashboard-title">Catalog</h1>' +
     '<p class="copy">Operational visibility into product status, category, storefront state, sourcing, COA coverage, and catalog sync health.</p>' +
     '</div><div class="operator">Signed in as <strong>' + escapeHtml(email) + '</strong></div></section>' +
+    '<section class="catalog-sync-now-card">' +
+      '<div><span class="eyebrow">LIVE CATALOG</span><h2>Sync Google Sheet now</h2>' +
+      '<p>Push the latest Catalog tab into Supabase immediately instead of waiting for the hourly sync.</p></div>' +
+      '<div class="catalog-sync-now-actions"><span id="catalog-sync-now-status" aria-live="polite"></span>' +
+      '<button class="primary" id="catalog-sync-now" type="button">Sync Catalog Now</button></div>' +
+    '</section>' +
     '<section class="catalog-metrics" id="catalog-metrics"></section>' +
     '<section class="catalog-ops-grid">' +
       '<div class="catalog-ops-panel" id="catalog-feed-health"></div>' +
@@ -80,6 +86,30 @@ export function catalogPageMarkup(email: string, escapeHtml: Helpers['escapeHtml
 export async function bindCatalogPage(helpers: Helpers) {
   const list = document.querySelector<HTMLDivElement>('#catalog-list')
   if (!list) return
+
+  const syncButton = document.querySelector<HTMLButtonElement>('#catalog-sync-now')
+  const syncStatus = document.querySelector<HTMLSpanElement>('#catalog-sync-now-status')
+
+  syncButton?.addEventListener('click', async () => {
+    syncButton.disabled = true
+    syncButton.textContent = 'Syncing…'
+    if (syncStatus) syncStatus.textContent = 'Reading the Google Sheet and updating Nexus catalog…'
+
+    try {
+      const result = await syncCatalogNow()
+      const sync = result.sync
+      if (syncStatus) {
+        syncStatus.textContent = sync
+          ? 'Synced ' + (sync.upserted_count ?? 0) + ' products. Refreshing catalog…'
+          : 'Sync completed. Refreshing catalog…'
+      }
+      await bindCatalogPage(helpers)
+    } catch (error) {
+      if (syncStatus) syncStatus.textContent = error instanceof Error ? error.message : 'Catalog sync failed.'
+      syncButton.disabled = false
+      syncButton.textContent = 'Sync Catalog Now'
+    }
+  })
 
   try {
     const payload = await loadCoreCatalog()
