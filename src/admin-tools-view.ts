@@ -5,7 +5,7 @@ type Helpers = {
 }
 
 export function adminToolsPageMarkup(email: string, escapeHtml: Helpers['escapeHtml']) {
-  return '<section class="dashboard-head"><div>' +
+  return '<section class="dashboard-head dashboard-head-compact"><div>' +
     '<span class="eyebrow">ADMINISTRATION</span><h1 class="dashboard-title">Admin Tools</h1>' +
     '<p class="copy">Customer account invitations and reusable support/message templates with controlled, audited actions.</p>' +
     '</div><div class="operator">Signed in as <strong>' + escapeHtml(email) + '</strong></div></section>' +
