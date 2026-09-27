@@ -6,25 +6,23 @@ type Helpers = {
   dateTime: (value: string | null | undefined) => string
 }
 
-const attentionItem = (
-  label: string,
-  value: number,
-  href: string,
-  detail: string,
-  tone = '',
-) =>
-  '<a class="attention-item ' + tone + '" href="' + href + '">' +
-    '<span><b>' + label + '</b><small>' + detail + '</small></span>' +
-    '<strong>' + value + '</strong>' +
-  '</a>'
-
 export function dashboardPageMarkup(email: string, escapeHtml: Helpers['escapeHtml']) {
-  return '<section class="dashboard-head dashboard-head-compact"><div>' +
-    '<span class="eyebrow">CORE COMMAND CENTER</span><h1 class="dashboard-title">Dashboard</h1>' +
-    '<p class="copy">Live business status, priority work, money, customers, and fulfillment in one view.</p>' +
-    '</div><div class="operator">Signed in as <strong>' + escapeHtml(email) + '</strong></div></section>' +
-    '<section class="executive-dashboard" id="executive-dashboard"><div class="loading">Loading dashboard…</div></section>'
+  return '<section class="core-dashboard-shell">' +
+    '<section class="core-hero">' +
+      '<div class="core-hero-copy">' +
+        '<span class="core-hero-kicker">SCIENCE BY HUGS</span>' +
+        '<h1>CORE</h1>' +
+        '<p>OPERATIONS <i>•</i> FINANCE <i>•</i> FULFILLMENT</p>' +
+        '<small>Signed in as <strong>' + escapeHtml(email) + '</strong></small>' +
+      '</div>' +
+      '<div class="core-hero-orbit" aria-hidden="true"><span></span><i></i></div>' +
+      '<div class="core-live-card"><span><i></i> SYSTEM ONLINE</span><strong>CORE v1</strong><small>Live</small></div>' +
+    '</section>' +
+    '<section id="executive-dashboard"><div class="loading">Loading command center…</div></section>' +
+  '</section>'
 }
+
+const icon = (symbol: string) => '<span class="core-kpi-icon" aria-hidden="true">' + symbol + '</span>'
 
 export async function bindDashboardPage(helpers: Helpers) {
   const root = document.querySelector<HTMLDivElement>('#executive-dashboard')
@@ -33,116 +31,88 @@ export async function bindDashboardPage(helpers: Helpers) {
   try {
     const data = await loadCoreDashboard()
     const { attention, business, operations, customers, catalog } = data
-    const attentionTotal = Object.values(attention).reduce((sum, value) => sum + value, 0)
-
-    const fulfillmentRows = Object.entries(operations.fulfillment)
-      .sort((a, b) => b[1] - a[1])
-      .map(([status, count]) =>
-        '<div class="dashboard-list-row"><span class="status-copy">' +
-          '<strong>' + helpers.escapeHtml((status || 'unknown').replaceAll('_', ' ')) + '</strong>' +
-        '</span><strong>' + count + '</strong></div>',
-      )
-      .join('')
-
-    const paymentRows = operations.payment_mix.length
-      ? operations.payment_mix.map(item =>
-          '<div class="dashboard-list-row"><span><strong>' + helpers.escapeHtml(item.method) + '</strong>' +
-          '<small>' + item.count + ' paid order' + (item.count === 1 ? '' : 's') + '</small></span>' +
-          '<strong>' + helpers.money(item.amount) + '</strong></div>',
-        ).join('')
-      : '<p class="dashboard-muted">No paid payment data yet.</p>'
-
-    const topRows = customers.top_customers.length
-      ? customers.top_customers.map(customer =>
-          '<div class="dashboard-list-row"><span><strong>' + helpers.escapeHtml(customer.name) + '</strong>' +
-          '<small>' + helpers.escapeHtml(customer.customer_number || 'Customer') + ' · ' +
-          customer.order_count + ' order' + (customer.order_count === 1 ? '' : 's') + '</small></span>' +
-          '<strong>' + helpers.money(customer.paid_spend) + '</strong></div>',
-        ).join('')
-      : '<p class="dashboard-muted">No customer order history yet.</p>'
+    const unfulfilled = Object.entries(operations.fulfillment)
+      .filter(([status]) => !['delivered', 'cancelled'].includes(status.toLowerCase()))
+      .reduce((sum, [, count]) => sum + count, 0)
 
     const recentOrders = operations.recent_orders.length
       ? operations.recent_orders.slice(0, 6).map(order =>
-          '<a class="dashboard-list-row dashboard-link-row" href="#orders"><span><strong>' +
-          helpers.escapeHtml(order.order_number || 'Order') + '</strong><small>' +
-          helpers.escapeHtml(order.status.replaceAll('_', ' ')) + ' · ' +
-          helpers.escapeHtml(order.payment_status.replaceAll('_', ' ')) + '</small></span><strong>' +
-          helpers.money(order.total) + '</strong></a>',
+          '<a class="core-order-row" href="#orders">' +
+            '<span><strong>' + helpers.escapeHtml(order.order_number || 'Order') + '</strong>' +
+            '<small>' + helpers.escapeHtml(order.payment_method || 'Payment') + '</small></span>' +
+            '<strong>' + helpers.money(order.total) + '</strong>' +
+            '<span class="core-row-status ' + helpers.escapeHtml(order.payment_status === 'paid' ? 'paid' : 'open') + '">' +
+              helpers.escapeHtml(order.payment_status === 'paid' ? 'Paid' : order.payment_status.replaceAll('_', ' ')) +
+            '</span>' +
+            '<time>' + helpers.escapeHtml(new Date(order.created_at).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })) + '</time>' +
+          '</a>',
         ).join('')
-      : '<p class="dashboard-muted">No recent orders.</p>'
+      : '<div class="core-empty-line">No recent orders.</div>'
 
-    const quickLink = (href: string, label: string, detail: string) =>
-      '<a class="dashboard-quick-link" href="' + href + '"><span><strong>' + label +
-      '</strong><small>' + detail + '</small></span><b>→</b></a>'
+    const fulfillmentOpen = unfulfilled
+    const pendingPayments = attention.payment_submitted
+    const pendingInvoices = attention.awaiting_invoice_approval + attention.ready_to_send
+    const catalogIssues = attention.missing_coa + attention.uncategorized_products
+
+    const systemRow = (label: string, value: string | number, href: string, healthy = true) =>
+      '<a class="core-health-row" href="' + href + '">' +
+        '<span><b>' + label + '</b><small>' + value + '</small></span>' +
+        '<strong class="' + (healthy ? 'healthy' : 'warning') + '">' + (healthy ? 'Healthy' : 'Review') + '</strong>' +
+      '</a>'
 
     root.innerHTML =
-      '<section class="dashboard-priority ' + (attentionTotal ? 'has-work' : 'clear') + '">' +
-        '<div class="dashboard-priority-copy"><span class="eyebrow">PRIORITY</span><h2>' +
-          (attentionTotal ? attentionTotal + ' items need attention' : 'Operations are clear') +
-        '</h2><p>' +
-          (attentionTotal
-            ? 'Work the priority queue first, then move into fulfillment and customer follow-up.'
-            : 'No immediate operational actions are waiting right now.') +
-        '</p></div>' +
-        '<a class="button primary dashboard-priority-action" href="#operations">' +
-          (attentionTotal ? 'Open priority queue' : 'Open operations') +
-        '</a>' +
+      '<section class="core-kpi-grid">' +
+        '<article class="core-kpi-card">' + icon('$') + '<span>Total Revenue</span><strong>' +
+          helpers.money(business.paid_revenue) + '</strong><small>' + business.paid_orders + ' paid orders</small></article>' +
+        '<article class="core-kpi-card">' + icon('▱') + '<span>Total Orders</span><strong>' +
+          business.paid_orders + '</strong><small>' + business.orders_30d + ' in last 30 days</small></article>' +
+        '<article class="core-kpi-card">' + icon('◎') + '<span>Customers</span><strong>' +
+          business.customers + '</strong><small>' + business.active_customers + ' active</small></article>' +
+        '<article class="core-kpi-card">' + icon('▤') + '<span>Pending Payments</span><strong>' +
+          pendingPayments + '</strong><small>' + (pendingPayments ? 'Needs review' : 'No pending') + '</small></article>' +
+        '<article class="core-kpi-card">' + icon('◇') + '<span>Unfulfilled Orders</span><strong>' +
+          fulfillmentOpen + '</strong><small>' + (fulfillmentOpen ? 'In progress' : 'All caught up') + '</small></article>' +
       '</section>' +
 
-      '<section class="dashboard-kpi-grid">' +
-        '<article class="dashboard-kpi dashboard-kpi-featured"><span>Paid revenue</span><strong>' +
-          helpers.money(business.paid_revenue) + '</strong><small>' + business.paid_orders + ' paid orders · all time</small></article>' +
-        '<article class="dashboard-kpi"><span>Last 30 days</span><strong>' +
-          helpers.money(business.revenue_30d) + '</strong><small>' + business.orders_30d + ' orders</small></article>' +
-        '<article class="dashboard-kpi"><span>Average paid order</span><strong>' +
-          helpers.money(business.average_paid_order) + '</strong><small>Across paid orders</small></article>' +
-        '<article class="dashboard-kpi"><span>Customers</span><strong>' + business.customers +
-          '</strong><small>' + business.active_customers + ' active · ' + business.new_customers_30d + ' new / 30d</small></article>' +
-      '</section>' +
-
-      '<section class="dashboard-attention-block">' +
-        '<div class="dashboard-section-head"><div><span class="eyebrow">ACTION QUEUE</span><h2>Needs attention</h2></div>' +
-          '<a href="#operations">View operations →</a></div>' +
-        '<div class="attention-grid attention-grid-v2">' +
-          attentionItem('Invoice approvals', attention.awaiting_invoice_approval, '#operations', 'Waiting for approval') +
-          attentionItem('Ready to send', attention.ready_to_send, '#operations', 'Approved PDFs') +
-          attentionItem('Payments to verify', attention.payment_submitted, '#operations', 'Submitted, not verified') +
-          attentionItem('Delayed orders', attention.delayed_orders, '#operations', 'Fulfillment exceptions', attention.delayed_orders ? 'warning' : '') +
-          attentionItem('Unpaid orders', attention.active_unpaid_orders, '#operations', 'Active, not recorded paid') +
-          attentionItem('Catalog issues', attention.missing_coa + attention.uncategorized_products, '#catalog', 'Missing COA or category',
-            attention.missing_coa + attention.uncategorized_products ? 'warning' : '') +
+      '<section class="core-quick-section">' +
+        '<div class="core-section-heading"><h2>Quick Actions</h2></div>' +
+        '<div class="core-quick-grid">' +
+          '<a href="#operations">' + icon('▤') + '<span>Create / Approve Invoice</span></a>' +
+          '<a href="#orders">' + icon('▱') + '<span>View Orders</span></a>' +
+          '<a href="#finance">' + icon('$') + '<span>Verify Payments</span></a>' +
+          '<a href="#catalog">' + icon('◇') + '<span>Manage Catalog</span></a>' +
+          '<a href="#customers">' + icon('◎') + '<span>View Customers</span></a>' +
         '</div>' +
       '</section>' +
 
-      '<div class="dashboard-primary-grid">' +
-        '<section class="dashboard-panel dashboard-panel-tall"><div class="dashboard-section-head"><div><span class="eyebrow">RECENT ACTIVITY</span><h2>Latest orders</h2></div><a href="#orders">All orders →</a></div>' +
-          recentOrders + '</section>' +
-        '<section class="dashboard-panel"><div class="dashboard-section-head"><div><span class="eyebrow">FULFILLMENT</span><h2>Order stages</h2></div><a href="#operations">Manage →</a></div>' +
-          (fulfillmentRows || '<p class="dashboard-muted">No fulfillment data.</p>') + '</section>' +
-      '</div>' +
+      '<div class="core-dashboard-columns">' +
+        '<section class="core-dashboard-panel core-recent-panel">' +
+          '<div class="core-section-heading"><h2>Recent Orders</h2><a href="#orders">View All →</a></div>' +
+          '<div class="core-order-table-head"><span>Order</span><span>Amount</span><span>Status</span><span>Date</span></div>' +
+          '<div class="core-order-table">' + recentOrders + '</div>' +
+        '</section>' +
 
-      '<div class="dashboard-secondary-grid">' +
-        '<section class="dashboard-panel"><div class="dashboard-section-head"><div><span class="eyebrow">PAYMENTS</span><h2>Paid mix</h2></div><a href="#finance">Finance →</a></div>' +
-          paymentRows + '</section>' +
-        '<section class="dashboard-panel"><div class="dashboard-section-head"><div><span class="eyebrow">CUSTOMERS</span><h2>Top paid spend</h2></div><a href="#customers">Customers →</a></div>' +
-          topRows + '</section>' +
-        '<section class="dashboard-panel dashboard-health-panel"><div class="dashboard-section-head"><div><span class="eyebrow">CATALOG</span><h2>Readiness</h2></div><a href="#catalog">Catalog →</a></div>' +
-          '<div class="dashboard-health-metrics">' +
-            '<div><span>Active</span><strong>' + catalog.active + '</strong></div>' +
-            '<div><span>Available</span><strong>' + catalog.available + '</strong></div>' +
-            '<div><span>COA coverage</span><strong>' + catalog.with_coa + '/' + catalog.total + '</strong></div>' +
+        '<section class="core-dashboard-panel">' +
+          '<div class="core-section-heading"><h2>System Status</h2><a href="#notifications">View All →</a></div>' +
+          '<div class="core-health-list">' +
+            systemRow('Orders', business.paid_orders, '#orders', true) +
+            systemRow('Payments', pendingPayments + ' pending', '#finance', pendingPayments === 0) +
+            systemRow('Fulfillment', fulfillmentOpen + ' active', '#operations', attention.delayed_orders === 0) +
+            systemRow('Invoices', pendingInvoices + ' pending', '#operations', pendingInvoices === 0) +
+            systemRow('Catalog', catalog.active + ' active', '#catalog', catalogIssues === 0) +
           '</div>' +
-          '<p class="dashboard-health-note">' +
-            catalog.missing_coa + ' missing COA · ' + catalog.uncategorized + ' uncategorized' +
-          '</p>' +
         '</section>' +
       '</div>' +
 
-      '<section class="dashboard-quick-links">' +
-        quickLink('#operations', 'Operations', 'Invoices, payments, fulfillment') +
-        quickLink('#finance', 'Finance', 'Revenue and receivables') +
-        quickLink('#customers', 'Customers', 'Accounts and history') +
-        quickLink('#catalog', 'Catalog', 'Products and readiness') +
+      '<section class="core-bottom-insights">' +
+        '<article><span>30-Day Revenue</span><strong>' + helpers.money(business.revenue_30d) +
+          '</strong><small>' + business.orders_30d + ' orders</small></article>' +
+        '<article><span>Average Paid Order</span><strong>' + helpers.money(business.average_paid_order) +
+          '</strong><small>Across all paid orders</small></article>' +
+        '<article><span>Repeat Customers</span><strong>' + business.repeat_customers +
+          '</strong><small>' + business.new_customers_30d + ' new / 30d</small></article>' +
+        '<article><span>Catalog Coverage</span><strong>' + catalog.with_coa + '/' + catalog.total +
+          '</strong><small>COA coverage</small></article>' +
       '</section>' +
 
       '<p class="dashboard-generated">Updated ' + helpers.escapeHtml(helpers.dateTime(data.generated_at)) + '</p>'
