@@ -53,7 +53,7 @@ function productCard(product: CoreCatalogProduct, helpers: Helpers) {
 }
 
 export function catalogPageMarkup(email: string, escapeHtml: Helpers['escapeHtml']) {
-  return '<section class="dashboard-head"><div>' +
+  return '<section class="dashboard-head dashboard-head-compact"><div>' +
     '<span class="eyebrow">PRODUCT OPERATIONS</span><h1 class="dashboard-title">Catalog</h1>' +
     '<p class="copy">Operational visibility into product status, category, storefront state, sourcing, COA coverage, and catalog sync health.</p>' +
     '</div><div class="operator">Signed in as <strong>' + escapeHtml(email) + '</strong></div></section>' +
