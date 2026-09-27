@@ -23,6 +23,7 @@ export type CoreCatalogProduct = {
   coa_url: string | null
   price: number
   active: boolean
+  core_hidden: boolean
   featured: boolean
   sort_order: number
   image_url: string | null
@@ -108,6 +109,7 @@ export type CoreCatalogPayload = {
     total: number
     active: number
     available: number
+    hidden: number
     featured: number
     with_coa: number
     missing_category: number
@@ -180,4 +182,19 @@ export async function syncCatalogNow(): Promise<CatalogSyncResult> {
   if (error) throw error
   if (!data?.success) throw new Error(data?.error || 'Could not start catalog sync')
   return data as CatalogSyncResult
+}
+
+
+export async function setCatalogVisibility(productId: string, hidden: boolean) {
+  const { data, error } = await supabase.functions.invoke('core-catalog-control', {
+    body: {
+      action: 'set_visibility',
+      productId,
+      hidden,
+    },
+  })
+
+  if (error) throw error
+  if (!data?.success) throw new Error(data?.error || 'Could not update storefront visibility')
+  return data.product as Pick<CoreCatalogProduct, 'id' | 'name' | 'core_hidden' | 'active' | 'storefront_status' | 'updated_at'>
 }
