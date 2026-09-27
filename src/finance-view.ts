@@ -7,9 +7,9 @@ type Helpers = {
 }
 
 export function financePageMarkup(email: string, escapeHtml: Helpers['escapeHtml']) {
-  return '<section class="dashboard-head"><div>' +
-    '<span class="eyebrow">FINANCIAL OPERATIONS</span><h1 class="dashboard-title">Finance</h1>' +
-    '<p class="copy">Recorded revenue, receivables, payment review, invoice aging, and fulfillment-linked cash visibility. This is operational reporting, not bank reconciliation.</p>' +
+  return '<section class="dashboard-head dashboard-head-compact"><div>' +
+    '<span class="eyebrow">FINANCE</span><h1 class="dashboard-title">Finance</h1>' +
+    '<p class="copy">Operational revenue, verified payments, receivables, and open cash exposure. This is internal reporting, not bank reconciliation.</p>' +
     '</div><div class="operator">Signed in as <strong>' + escapeHtml(email) + '</strong></div></section>' +
     '<section id="finance-root"><div class="loading">Loading finance…</div></section>'
 }
