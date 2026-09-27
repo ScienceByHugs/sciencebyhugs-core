@@ -156,3 +156,28 @@ export async function updateCatalogMetadata(productId: string, metadata: Catalog
     'quantity' | 'lot_number' | 'coa_url' | 'updated_at'
   >
 }
+
+
+export type CatalogSyncResult = {
+  success: boolean
+  sync: {
+    id: string
+    status: string
+    received_count: number | null
+    upserted_count: number | null
+    deactivated_count: number | null
+    started_at: string
+    completed_at: string | null
+    error_message: string | null
+  } | null
+}
+
+export async function syncCatalogNow(): Promise<CatalogSyncResult> {
+  const { data, error } = await supabase.functions.invoke('core-catalog-sync', {
+    body: {},
+  })
+
+  if (error) throw error
+  if (!data?.success) throw new Error(data?.error || 'Could not start catalog sync')
+  return data as CatalogSyncResult
+}
