@@ -115,28 +115,46 @@ function keepCoreViewInUrl(view: CoreView) {
 
 function shell(content: string, signedIn = false) {
   const activeView = resolveCoreView()
+  const navIcon: Record<CoreView, string> = {
+    dashboard: '⌂',
+    operations: '▤',
+    orders: '▱',
+    customers: '◎',
+    catalog: '◇',
+    analytics: '↗',
+    finance: '$',
+    referrals: '⌘',
+    'admin-tools': '⚙',
+    notifications: '!',
+    audit: '≡',
+  }
+
   const navLink = (view: CoreView, label: string) =>
     '<a href="#' + view + '" class="' + (activeView === view ? 'active' : '') + '"' +
-    (activeView === view ? ' aria-current="page"' : '') + '><span>' + label + '</span></a>'
+    (activeView === view ? ' aria-current="page"' : '') + '>' +
+    '<span class="core-nav-icon" aria-hidden="true">' + navIcon[view] + '</span>' +
+    '<span>' + label + '</span></a>'
 
   const navigation = signedIn
     ? '<nav class="core-nav" aria-label="Core navigation">' +
-      '<div class="core-nav-group"><span class="core-nav-label">Command</span>' +
+      '<div class="core-nav-group">' +
         navLink('dashboard', 'Dashboard') +
-        navLink('operations', 'Operations') +
+      '</div>' +
+      '<div class="core-nav-group"><span class="core-nav-label">OPERATIONS</span>' +
         navLink('orders', 'Orders') +
+        navLink('operations', 'Fulfillment') +
+        navLink('finance', 'Payments') +
+      '</div>' +
+      '<div class="core-nav-group"><span class="core-nav-label">BUSINESS</span>' +
         navLink('customers', 'Customers') +
-      '</div>' +
-      '<div class="core-nav-group"><span class="core-nav-label">Business</span>' +
         navLink('catalog', 'Catalog') +
-        navLink('finance', 'Finance') +
-        navLink('analytics', 'Analytics') +
         navLink('referrals', 'Referrals') +
+        navLink('analytics', 'Analytics') +
       '</div>' +
-      '<div class="core-nav-group"><span class="core-nav-label">System</span>' +
-        navLink('notifications', 'Alerts') +
+      '<div class="core-nav-group"><span class="core-nav-label">SYSTEM</span>' +
         navLink('admin-tools', 'Admin') +
-        navLink('audit', 'Audit') +
+        navLink('notifications', 'Alerts') +
+        navLink('audit', 'Audit Log') +
       '</div>' +
       '</nav>'
     : ''
@@ -167,20 +185,42 @@ function shell(content: string, signedIn = false) {
         </div>
         ${navigation}
         <div class="core-sidebar-footer">
-          <div class="core-system-state"><i aria-hidden="true"></i><span>SYSTEM READY</span></div>
+          <div class="core-system-state"><i aria-hidden="true"></i><span>SYSTEM ONLINE</span></div>
           <button class="ghost compact core-sign-out" id="sign-out">Sign out</button>
         </div>
       </aside>
       <button class="core-nav-backdrop" id="core-nav-backdrop" type="button" aria-label="Close navigation"></button>
+
       <section class="core-workspace">
+        <header class="core-commandbar">
+          <div class="core-command-search">
+            <span aria-hidden="true">⌕</span>
+            <input id="core-command-search" type="search" placeholder="Jump to a section…" autocomplete="off" />
+            <kbd>⌘K</kbd>
+          </div>
+          <div class="core-command-actions">
+            <a href="#notifications" class="core-command-icon" aria-label="Open alerts">!</a>
+            <span class="core-command-state"><i aria-hidden="true"></i> Live</span>
+          </div>
+        </header>
+
         <header class="core-mobile-bar">
           <button class="core-menu-button" id="core-nav-toggle" type="button" aria-controls="core-sidebar" aria-expanded="false">
             <span aria-hidden="true">☰</span><b>Menu</b>
           </button>
           <img class="core-mobile-logo" src="${coreLogoUrl}" alt="Core — Science By Hugs" />
-          <span class="core-mobile-state" title="System ready"><i aria-hidden="true"></i></span>
+          <a href="#notifications" class="core-mobile-alert" aria-label="Open alerts">!</a>
         </header>
+
         <main class="core-content-shell" id="core-content" tabindex="-1">${content}</main>
+
+        <nav class="core-mobile-bottom-nav" aria-label="Mobile quick navigation">
+          <a href="#dashboard" class="${activeView === 'dashboard' ? 'active' : ''}"><span>⌂</span><b>Dashboard</b></a>
+          <a href="#orders" class="${activeView === 'orders' ? 'active' : ''}"><span>▱</span><b>Orders</b></a>
+          <a href="#finance" class="${activeView === 'finance' ? 'active' : ''}"><span>$</span><b>Finance</b></a>
+          <a href="#customers" class="${activeView === 'customers' ? 'active' : ''}"><span>◎</span><b>Customers</b></a>
+          <button id="core-mobile-more" type="button"><span>•••</span><b>More</b></button>
+        </nav>
       </section>
     </div>
   `
@@ -189,6 +229,8 @@ function shell(content: string, signedIn = false) {
   const toggle = document.querySelector<HTMLButtonElement>('#core-nav-toggle')
   const close = document.querySelector<HTMLButtonElement>('#core-nav-close')
   const backdrop = document.querySelector<HTMLButtonElement>('#core-nav-backdrop')
+  const more = document.querySelector<HTMLButtonElement>('#core-mobile-more')
+  const commandSearch = document.querySelector<HTMLInputElement>('#core-command-search')
 
   const setNavigationOpen = (open: boolean) => {
     document.body.classList.toggle('core-nav-open', open)
@@ -196,15 +238,39 @@ function shell(content: string, signedIn = false) {
     sidebar?.setAttribute('aria-hidden', String(!open && window.matchMedia('(max-width: 900px)').matches))
   }
 
+  const sectionMap: Array<[string, CoreView]> = [
+    ['dashboard', 'dashboard'], ['operations', 'operations'], ['fulfillment', 'operations'],
+    ['orders', 'orders'], ['customers', 'customers'], ['catalog', 'catalog'],
+    ['finance', 'finance'], ['payments', 'finance'], ['analytics', 'analytics'],
+    ['referrals', 'referrals'], ['admin', 'admin-tools'], ['alerts', 'notifications'],
+    ['notifications', 'notifications'], ['audit', 'audit'],
+  ]
+
+  const jumpToSearch = () => {
+    const query = commandSearch?.value.trim().toLowerCase()
+    if (!query) return
+    const match = sectionMap.find(([label]) => label.includes(query))
+    if (match) location.hash = match[1]
+  }
+
   toggle?.addEventListener('click', () => setNavigationOpen(!document.body.classList.contains('core-nav-open')))
+  more?.addEventListener('click', () => setNavigationOpen(true))
   close?.addEventListener('click', () => setNavigationOpen(false))
   backdrop?.addEventListener('click', () => setNavigationOpen(false))
+  commandSearch?.addEventListener('keydown', event => {
+    if (event.key === 'Enter') jumpToSearch()
+  })
+  document.addEventListener('keydown', event => {
+    if ((event.metaKey || event.ctrlKey) && event.key.toLowerCase() === 'k') {
+      event.preventDefault()
+      commandSearch?.focus()
+      return
+    }
+    if (event.key === 'Escape') setNavigationOpen(false)
+  })
   document.querySelectorAll<HTMLAnchorElement>('.core-nav a').forEach(link =>
     link.addEventListener('click', () => setNavigationOpen(false)),
   )
-  document.addEventListener('keydown', event => {
-    if (event.key === 'Escape') setNavigationOpen(false)
-  }, { once: true })
 
   document.querySelector('#sign-out')?.addEventListener('click', async () => {
     await supabase.auth.signOut()
