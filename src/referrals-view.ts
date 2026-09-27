@@ -6,7 +6,7 @@ type Helpers = {
 }
 
 export function referralsPageMarkup(email: string, escapeHtml: Helpers['escapeHtml']) {
-  return '<section class="dashboard-head"><div>' +
+  return '<section class="dashboard-head dashboard-head-compact"><div>' +
     '<span class="eyebrow">REFERRAL OPERATIONS</span><h1 class="dashboard-title">Referrals</h1>' +
     '<p class="copy">Referral progress, earned rewards, milestone visibility, and automatic membership-upgrade awareness.</p>' +
     '</div><div class="operator">Signed in as <strong>' + escapeHtml(email) + '</strong></div></section>' +
