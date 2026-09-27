@@ -115,38 +115,96 @@ function keepCoreViewInUrl(view: CoreView) {
 
 function shell(content: string, signedIn = false) {
   const activeView = resolveCoreView()
+  const navLink = (view: CoreView, label: string) =>
+    '<a href="#' + view + '" class="' + (activeView === view ? 'active' : '') + '"' +
+    (activeView === view ? ' aria-current="page"' : '') + '><span>' + label + '</span></a>'
+
   const navigation = signedIn
-    ? '<nav class="core-nav" aria-label="Core navigation" tabindex="0">' +
-      '<a href="#dashboard" class="' + (activeView === 'dashboard' ? 'active' : '') + '"' + (activeView === 'dashboard' ? ' aria-current="page"' : '') + '>Dashboard</a>' +
-      '<a href="#operations" class="' + (activeView === 'operations' ? 'active' : '') + '"' + (activeView === 'operations' ? ' aria-current="page"' : '') + '>Operations</a>' +
-      '<a href="#orders" class="' + (activeView === 'orders' ? 'active' : '') + '"' + (activeView === 'orders' ? ' aria-current="page"' : '') + '>Orders</a>' +
-      '<a href="#customers" class="' + (activeView === 'customers' ? 'active' : '') + '"' + (activeView === 'customers' ? ' aria-current="page"' : '') + '>Customers</a>' +
-      '<a href="#catalog" class="' + (activeView === 'catalog' ? 'active' : '') + '"' + (activeView === 'catalog' ? ' aria-current="page"' : '') + '>Catalog</a>' +
-      '<a href="#analytics" class="' + (activeView === 'analytics' ? 'active' : '') + '"' + (activeView === 'analytics' ? ' aria-current="page"' : '') + '>Analytics</a>' +
-      '<a href="#finance" class="' + (activeView === 'finance' ? 'active' : '') + '"' + (activeView === 'finance' ? ' aria-current="page"' : '') + '>Finance</a>' +
-      '<a href="#referrals" class="' + (activeView === 'referrals' ? 'active' : '') + '"' + (activeView === 'referrals' ? ' aria-current="page"' : '') + '>Referrals</a>' +
-      '<a href="#admin-tools" class="' + (activeView === 'admin-tools' ? 'active' : '') + '"' + (activeView === 'admin-tools' ? ' aria-current="page"' : '') + '>Admin</a>' +
-      '<a href="#notifications" class="' + (activeView === 'notifications' ? 'active' : '') + '"' + (activeView === 'notifications' ? ' aria-current="page"' : '') + '>Alerts</a>' +
-      '<a href="#audit" class="' + (activeView === 'audit' ? 'active' : '') + '"' + (activeView === 'audit' ? ' aria-current="page"' : '') + '>Audit</a>' +
+    ? '<nav class="core-nav" aria-label="Core navigation">' +
+      '<div class="core-nav-group"><span class="core-nav-label">Command</span>' +
+        navLink('dashboard', 'Dashboard') +
+        navLink('operations', 'Operations') +
+        navLink('orders', 'Orders') +
+        navLink('customers', 'Customers') +
+      '</div>' +
+      '<div class="core-nav-group"><span class="core-nav-label">Business</span>' +
+        navLink('catalog', 'Catalog') +
+        navLink('finance', 'Finance') +
+        navLink('analytics', 'Analytics') +
+        navLink('referrals', 'Referrals') +
+      '</div>' +
+      '<div class="core-nav-group"><span class="core-nav-label">System</span>' +
+        navLink('notifications', 'Alerts') +
+        navLink('admin-tools', 'Admin') +
+        navLink('audit', 'Audit') +
+      '</div>' +
       '</nav>'
     : ''
 
+  if (!signedIn) {
+    app.innerHTML = `
+      <a class="skip-link" href="#core-content">Skip to content</a>
+      <main class="shell login-shell">
+        <header class="commandbar login-commandbar">
+          <div class="core-brand">
+            <img class="core-brand-lockup" src="${coreLogoUrl}" alt="Core — Science By Hugs" />
+          </div>
+          <span class="status">SYSTEM READY</span>
+        </header>
+        <div id="core-content" tabindex="-1">${content}</div>
+      </main>
+    `
+    return
+  }
+
   app.innerHTML = `
     <a class="skip-link" href="#core-content">Skip to content</a>
-    <main class="shell">
-      <header class="commandbar">
-        <div class="core-brand">
+    <div class="core-app-shell">
+      <aside class="core-sidebar" id="core-sidebar" aria-label="CORE workspace navigation">
+        <div class="core-sidebar-brand">
           <img class="core-brand-lockup" src="${coreLogoUrl}" alt="Core — Science By Hugs" />
+          <button class="core-nav-close" id="core-nav-close" type="button" aria-label="Close navigation">×</button>
         </div>
-        <div class="command-actions">
-          ${navigation}
-          <span class="status">SYSTEM READY</span>
-          ${signedIn ? '<button class="ghost compact" id="sign-out">Sign out</button>' : ''}
+        ${navigation}
+        <div class="core-sidebar-footer">
+          <div class="core-system-state"><i aria-hidden="true"></i><span>SYSTEM READY</span></div>
+          <button class="ghost compact core-sign-out" id="sign-out">Sign out</button>
         </div>
-      </header>
-      <div id="core-content" tabindex="-1">${content}</div>
-    </main>
+      </aside>
+      <button class="core-nav-backdrop" id="core-nav-backdrop" type="button" aria-label="Close navigation"></button>
+      <section class="core-workspace">
+        <header class="core-mobile-bar">
+          <button class="core-menu-button" id="core-nav-toggle" type="button" aria-controls="core-sidebar" aria-expanded="false">
+            <span aria-hidden="true">☰</span><b>Menu</b>
+          </button>
+          <img class="core-mobile-logo" src="${coreLogoUrl}" alt="Core — Science By Hugs" />
+          <span class="core-mobile-state" title="System ready"><i aria-hidden="true"></i></span>
+        </header>
+        <main class="core-content-shell" id="core-content" tabindex="-1">${content}</main>
+      </section>
+    </div>
   `
+
+  const sidebar = document.querySelector<HTMLElement>('#core-sidebar')
+  const toggle = document.querySelector<HTMLButtonElement>('#core-nav-toggle')
+  const close = document.querySelector<HTMLButtonElement>('#core-nav-close')
+  const backdrop = document.querySelector<HTMLButtonElement>('#core-nav-backdrop')
+
+  const setNavigationOpen = (open: boolean) => {
+    document.body.classList.toggle('core-nav-open', open)
+    toggle?.setAttribute('aria-expanded', String(open))
+    sidebar?.setAttribute('aria-hidden', String(!open && window.matchMedia('(max-width: 900px)').matches))
+  }
+
+  toggle?.addEventListener('click', () => setNavigationOpen(!document.body.classList.contains('core-nav-open')))
+  close?.addEventListener('click', () => setNavigationOpen(false))
+  backdrop?.addEventListener('click', () => setNavigationOpen(false))
+  document.querySelectorAll<HTMLAnchorElement>('.core-nav a').forEach(link =>
+    link.addEventListener('click', () => setNavigationOpen(false)),
+  )
+  document.addEventListener('keydown', event => {
+    if (event.key === 'Escape') setNavigationOpen(false)
+  }, { once: true })
 
   document.querySelector('#sign-out')?.addEventListener('click', async () => {
     await supabase.auth.signOut()
