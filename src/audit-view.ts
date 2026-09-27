@@ -13,7 +13,7 @@ function readableAction(action: string) {
 }
 
 export function auditPageMarkup(email: string, escapeHtml: Helpers['escapeHtml']) {
-  return '<section class="dashboard-head"><div>' +
+  return '<section class="dashboard-head dashboard-head-compact"><div>' +
     '<span class="eyebrow">CONTROL HISTORY</span><h1 class="dashboard-title">Audit Log</h1>' +
     '<p class="copy">A read-only history of controlled Core changes, including who made the change and what record was affected.</p>' +
     '</div><div class="operator">Signed in as <strong>' + escapeHtml(email) + '</strong></div></section>' +
