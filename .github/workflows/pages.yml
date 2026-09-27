@@ -29,7 +29,7 @@ jobs:
         run: npm ci --no-audit --no-fund
       - name: Build for GitHub Pages
         env:
-          VITE_BASE_PATH: /sciencebyhugs-core/
+          VITE_BASE_PATH: /
         run: npm run build
       - name: Configure Pages
         uses: actions/configure-pages@v5
