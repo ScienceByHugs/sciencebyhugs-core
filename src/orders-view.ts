@@ -78,14 +78,14 @@ function orderCard(order: CoreOrder, helpers: Helpers) {
 }
 
 export function ordersPageMarkup(email: string, escapeHtml: Helpers['escapeHtml']) {
-  return '<section class="dashboard-head">' +
+  return '<section class="dashboard-head dashboard-head-compact">' +
     '<div><span class="eyebrow">ORDER MANAGEMENT</span>' +
       '<h1 class="dashboard-title">Orders</h1>' +
-      '<p class="copy">Every order, customer, payment state, invoice link, and fulfillment timeline in one place.</p>' +
+      '<p class="copy">Search customer activity, payment state, invoice access, and fulfillment history.</p>' +
     '</div>' +
     '<div class="operator">Signed in as <strong>' + escapeHtml(email) + '</strong></div>' +
   '</section>' +
-  '<section class="orders-toolbar">' +
+  '<section class="orders-toolbar orders-toolbar-v2">' +
     '<label class="queue-search"><span class="sr-only">Search orders</span>' +
       '<input id="orders-search" type="search" placeholder="Search order, customer, email…" autocomplete="off"></label>' +
     '<select id="orders-status" aria-label="Filter orders by status">' +
