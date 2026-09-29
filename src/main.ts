@@ -285,7 +285,7 @@ function renderLogin(message = '') {
         <span class="eyebrow">AUTHORIZED PERSONNEL</span>
         <h1 class="login-title">CORE</h1>
         <p class="tagline">Control. Operate. Manage.</p>
-        <p class="copy">Sign in with an authorized Science By HUGs administrator account.</p>
+        <p class="copy">Sign in with an authorized Science By Hugs administrator account.</p>
         <form id="login-form" class="login-form">
           <label>Email<input name="email" type="email" autocomplete="email" required></label>
           <label>Password<input name="password" type="password" autocomplete="current-password" required></label>
