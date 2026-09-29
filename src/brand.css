@@ -31,3 +31,16 @@ button,.button,.core-nav,.queue-tab,.status-pill,input,select,textarea{border-co
   border-color:rgba(0,210,255,.13);
 }
 .core-nav{background:rgba(13,17,23,.86)}
+/* Blue Reactor v2 — CORE */
+:root{
+  --core-graphite:#0D1117;
+  --core-cobalt:#0057FF;
+  --core-silver:#C0C6D4;
+  --core-tagline:"Control. Operate. Manage.";
+}
+.core-tagline,.tagline{
+  color:var(--sbh-cyan);
+  font-family:var(--sbh-heading);
+  font-weight:700;
+  letter-spacing:.04em;
+}
