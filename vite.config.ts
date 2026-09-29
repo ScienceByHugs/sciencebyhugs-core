@@ -23,9 +23,9 @@ export default defineConfig({
       ],
       manifest: {
         id: '/',
-        name: 'Science By HUGs Core',
+        name: 'CORE — Science By Hugs',
         short_name: 'CORE',
-        description: 'Internal operations and administration PWA for Science By HUGs.',
+        description: 'CORE — Control. Operate. Manage. Internal operations system for Science By Hugs.',
         theme_color: '#0A0A0B',
         background_color: '#0A0A0B',
         display: 'standalone',
