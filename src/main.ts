@@ -1,4 +1,5 @@
 import { deliveryEstimateEditor, bindDeliveryEstimateEditors } from './delivery-estimate'
+import { disablePush } from './push'
 import './styles.css'
 import './brand.css'
 import { supabase } from './services/supabase'
@@ -274,7 +275,8 @@ function shell(content: string, signedIn = false) {
   )
 
   document.querySelector('#sign-out')?.addEventListener('click', async () => {
-    await supabase.auth.signOut()
+    try { await disablePush(); await supabase.auth.signOut() }
+    catch (error) { alert(error instanceof Error ? error.message : 'Could not sign out. Try again.') }
   })
 }
 
