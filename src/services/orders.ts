@@ -66,6 +66,7 @@ export type CoreOrder = {
   admin_notes: string | null
   contact_method: string | null
   fulfillment_note: string | null
+  estimated_delivery_date: string | null
   submitted_at: string | null
   paid_at: string | null
   ordered_at: string | null
@@ -87,4 +88,13 @@ export async function listCoreOrders(): Promise<CoreOrder[]> {
   if (error) throw error
   if (!data?.success) throw new Error(data?.error || 'Could not load orders')
   return data.orders || []
+}
+
+export async function updateEstimatedDelivery(orderId: string, estimatedDeliveryDate: string | null) {
+  const { data, error } = await supabase.functions.invoke('core-orders', {
+    body: { action: 'set_delivery_estimate', orderId, estimatedDeliveryDate },
+  })
+  if (error) throw error
+  if (!data?.success) throw new Error(data?.error || 'Could not save estimated delivery date')
+  return data as { success: true; order: { id: string; estimated_delivery_date: string | null; updated_at: string } }
 }

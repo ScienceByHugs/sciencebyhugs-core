@@ -1,0 +1,131 @@
+import "jsr:@supabase/functions-js/edge-runtime.d.ts";
+import { createClient } from "npm:@supabase/supabase-js@2.117.1";
+
+const corsHeaders = {
+  "Access-Control-Allow-Origin": "*",
+  "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
+  "Access-Control-Allow-Methods": "POST, OPTIONS",
+};
+
+const json = (body: unknown, status = 200) =>
+  new Response(JSON.stringify(body), {
+    status,
+    headers: { ...corsHeaders, "Content-Type": "application/json" },
+  });
+
+Deno.serve(async (req: Request) => {
+  if (req.method === "OPTIONS") {
+    return new Response("ok", { headers: corsHeaders });
+  }
+
+  if (req.method !== "POST") {
+    return json({ error: "Method not allowed" }, 405);
+  }
+
+  const authHeader = req.headers.get("Authorization");
+  if (!authHeader?.startsWith("Bearer ")) {
+    return json({ error: "Authentication required" }, 401);
+  }
+
+  const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
+  const publishableKeys = JSON.parse(Deno.env.get("SUPABASE_PUBLISHABLE_KEYS")!);
+  const secretKeys = JSON.parse(Deno.env.get("SUPABASE_SECRET_KEYS")!);
+
+  const userClient = createClient(
+    supabaseUrl,
+    publishableKeys.default,
+    {
+      global: { headers: { Authorization: authHeader } },
+      auth: { persistSession: false, autoRefreshToken: false },
+    },
+  );
+
+  const admin = createClient(
+    supabaseUrl,
+    secretKeys.default,
+    { auth: { persistSession: false, autoRefreshToken: false } },
+  );
+
+  const {
+    data: { user },
+    error: userError,
+  } = await userClient.auth.getUser();
+
+  if (userError || !user) {
+    return json({ error: "Invalid session" }, 401);
+  }
+
+  const role = String(user.app_metadata?.role || "").trim().toLowerCase();
+  if (!["owner", "admin"].includes(role)) {
+    return json({ error: "Core administrator access required" }, 403);
+  }
+
+  const { data: invoices, error: invoiceError } = await admin
+    .from("invoices")
+    .select("id,invoice_number,order_id,customer_id,status,subtotal,shipping_total,discount_total,tax_total,total,payment_method,google_sheet_name,google_sheet_url,pdf_status,pdf_url,pdf_created_at,created_at,contact_method,customer_name_snapshot,customer_email_snapshot,customer_phone_snapshot,send_status,sent_at,sent_to")
+    .order("created_at", { ascending: false })
+    .limit(100);
+
+  if (invoiceError) {
+    return json({ error: "Could not load invoices" }, 500);
+  }
+
+  const orderIds = [...new Set((invoices || []).map(i => i.order_id).filter(Boolean))];
+
+  let items: Array<Record<string, unknown>> = [];
+  let orders: Array<Record<string, unknown>> = [];
+  let payments: Array<Record<string, unknown>> = [];
+
+  if (orderIds.length) {
+    const [itemsResult, ordersResult, paymentsResult] = await Promise.all([
+      admin
+        .from("order_items")
+        .select("order_id,product_id,product_code,product_name,quantity,unit_price,line_total")
+        .in("order_id", orderIds)
+        .order("created_at", { ascending: true }),
+      admin
+        .from("orders")
+        .select("id,order_number,status,payment_status,payment_method,paid_at,ordered_at,shipped_at,delivered_at,estimated_delivery_date,delayed_at,cancelled_at,completed_at,updated_at")
+        .in("id", orderIds),
+      admin
+        .from("payments")
+        .select("id,order_id,provider,payment_reference,amount,status,notes,submitted_at,verified_at,paid_at,created_at,updated_at")
+        .in("order_id", orderIds),
+    ]);
+
+    if (itemsResult.error) return json({ error: "Could not load invoice items" }, 500);
+    if (ordersResult.error) return json({ error: "Could not load orders" }, 500);
+    if (paymentsResult.error) return json({ error: "Could not load payments" }, 500);
+
+    items = itemsResult.data || [];
+    orders = ordersResult.data || [];
+    payments = paymentsResult.data || [];
+  }
+
+  const itemsByOrder = new Map<string, Array<Record<string, unknown>>>();
+  for (const item of items) {
+    const orderId = String(item.order_id || "");
+    const list = itemsByOrder.get(orderId) || [];
+    list.push(item);
+    itemsByOrder.set(orderId, list);
+  }
+
+  const orderById = new Map(orders.map(order => [String(order.id), order]));
+  const paymentByOrder = new Map(payments.map(payment => [String(payment.order_id), payment]));
+
+  return json({
+    success: true,
+    invoices: (invoices || []).map(invoice => ({
+      ...invoice,
+      items: invoice.order_id
+        ? itemsByOrder.get(String(invoice.order_id)) || []
+        : [],
+      order: invoice.order_id
+        ? orderById.get(String(invoice.order_id)) || null
+        : null,
+      payment: invoice.order_id
+        ? paymentByOrder.get(String(invoice.order_id)) || null
+        : null,
+    })),
+  });
+});

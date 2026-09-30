@@ -1929,3 +1929,11 @@ body{
   .catalog-sync-now-actions span{max-width:none;text-align:left}
   .catalog-sync-now-actions button{width:100%}
 }
+
+/* Order delivery estimate editor */
+.delivery-estimate-editor{display:grid;gap:10px;padding:14px;margin:14px 0;border:1px solid rgba(32,201,255,.18);border-radius:12px;background:rgba(0,119,255,.035)}
+.delivery-estimate-editor label{display:grid;gap:7px;font-size:.78rem;color:var(--muted)}
+.delivery-estimate-input{width:100%;max-width:280px;min-height:44px;color-scheme:dark}
+.delivery-estimate-actions{display:flex;gap:8px;flex-wrap:wrap}
+.delivery-estimate-actions button{min-height:44px}
+.delivery-estimate-message{margin:0;font-size:.75rem;color:var(--muted);line-height:1.45}

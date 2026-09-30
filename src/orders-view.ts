@@ -1,3 +1,4 @@
+import { deliveryEstimateEditor, bindDeliveryEstimateEditors } from './delivery-estimate'
 import { listCoreOrders, type CoreOrder } from './services/orders'
 
 type Helpers = {
@@ -60,6 +61,7 @@ function orderCard(order: CoreOrder, helpers: Helpers) {
       '<div><span>Contact</span><strong>' + escapeHtml(order.contact_method || order.customer?.preferred_contact_method || '—') + '</strong></div>' +
       '<div><span>Updated</span><strong>' + escapeHtml(dateTime(order.updated_at)) + '</strong></div>' +
     '</div>' +
+    deliveryEstimateEditor(order.id, order.estimated_delivery_date, escapeHtml) +
     '<div class="order-lines">' + (items || '<p class="muted">No line items available.</p>') + '</div>' +
     '<div class="order-timeline">' + timelineHtml + '</div>' +
     (order.fulfillment_note
@@ -112,6 +114,8 @@ export async function bindOrdersPage(helpers: Helpers) {
     list.innerHTML = orders.length
       ? orders.map(order => orderCard(order, helpers)).join('')
       : '<div class="empty-state"><h2>No orders yet.</h2><p>Orders will appear here as they are created.</p></div>'
+
+    bindDeliveryEstimateEditors()
 
     let search = ''
     let status = 'all'
