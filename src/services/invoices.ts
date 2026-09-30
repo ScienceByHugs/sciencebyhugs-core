@@ -20,6 +20,7 @@ export type CoreOrderSummary = {
   ordered_at: string | null
   shipped_at: string | null
   delivered_at: string | null
+  estimated_delivery_date: string | null
   delayed_at: string | null
   cancelled_at: string | null
   completed_at: string | null
