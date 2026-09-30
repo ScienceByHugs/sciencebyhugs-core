@@ -118,6 +118,7 @@ export async function bindDashboardPage(helpers: Helpers) {
       '<p class="dashboard-generated">Updated ' + helpers.escapeHtml(helpers.dateTime(data.generated_at)) + '</p>'
   } catch (error) {
     root.innerHTML = '<div class="empty-state error-state"><h2>Could not load dashboard.</h2><p>' +
-      helpers.escapeHtml(error instanceof Error ? error.message : 'Unknown error') + '</p></div>'
+      helpers.escapeHtml(error instanceof Error ? error.message : 'Unknown error') + '</p><button class="primary" id="retry-dashboard" type="button">Try again</button></div>'
+    root.querySelector('#retry-dashboard')?.addEventListener('click',()=>{root.innerHTML='<div class="loading">Loading command center…</div>';void bindDashboardPage(helpers)})
   }
 }
