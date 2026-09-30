@@ -1,3 +1,4 @@
+import { deliveryEstimateEditor, bindDeliveryEstimateEditors } from './delivery-estimate'
 import './styles.css'
 import './brand.css'
 import { supabase } from './services/supabase'
@@ -483,6 +484,7 @@ function fulfillmentPanel(invoice: CoreInvoice) {
         Current stage${timestamp ? ` since <strong>${escapeHtml(dateTime(timestamp))}</strong>` : ''}.
         ${terminal ? 'This order is in a final fulfillment state.' : 'Choose the next operational state below.'}
       </p>
+      ${deliveryEstimateEditor(invoice.order_id, invoice.order?.estimated_delivery_date, escapeHtml)}
       ${!terminal ? `
         <div class="fulfillment-controls">
           <select class="fulfillment-status">
@@ -915,6 +917,8 @@ async function renderOperations(email: string) {
         }
       })
     })
+
+    bindDeliveryEstimateEditors()
 
     document.querySelectorAll<HTMLButtonElement>('.fulfillment-button').forEach(button => {
       button.addEventListener('click', async () => {
