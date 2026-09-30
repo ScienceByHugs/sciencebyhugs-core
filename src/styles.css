@@ -824,6 +824,7 @@ button:disabled{cursor:not-allowed;opacity:.58}
 }
 .core-sidebar-brand{
   min-height:54px;
+  flex:0 0 auto;
   display:flex;
   align-items:center;
   justify-content:space-between;
@@ -838,6 +839,16 @@ button:disabled{cursor:not-allowed;opacity:.58}
   gap:22px;
   width:100%;
   max-width:none;
+  min-width:0;
+  flex:0 0 auto;
+  align-items:stretch;
+  justify-content:stretch;
+  order:0;
+  margin:0;
+  padding:0;
+  border:0;
+  border-radius:0;
+  background:transparent;
   overflow:visible;
 }
 .core-nav-group{display:grid;gap:5px}
@@ -877,6 +888,7 @@ button:disabled{cursor:not-allowed;opacity:.58}
   box-shadow:inset 3px 0 0 var(--primary);
 }
 .core-sidebar-footer{
+  flex:0 0 auto;
   margin-top:auto;
   display:grid;
   gap:10px;
@@ -1531,7 +1543,7 @@ body{
   letter-spacing:.14em!important;
 }
 .core-nav a{
-  min-height:37px!important;
+  min-height:44px!important;
   gap:10px;
   padding:0 10px!important;
   border-radius:7px!important;
