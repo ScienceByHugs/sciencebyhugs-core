@@ -235,7 +235,7 @@ function shell(content: string, signedIn = false) {
     </div>
   `
 
-  void bindAvatars()
+  void bindAvatars('', activeView === 'account')
   const sidebar = document.querySelector<HTMLElement>('#core-sidebar')
   const toggle = document.querySelector<HTMLButtonElement>('#core-nav-toggle')
   const close = document.querySelector<HTMLButtonElement>('#core-nav-close')
