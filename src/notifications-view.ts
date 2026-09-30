@@ -1,3 +1,4 @@
+import { pushPanel, bindPushPanel } from './push'
 import { loadCoreNotifications } from './services/notifications'
 
 type Helpers = {
@@ -10,10 +11,11 @@ export function notificationsPageMarkup(email: string, escapeHtml: Helpers['esca
     '<span class="eyebrow">ATTENTION CENTER</span><h1 class="dashboard-title">Notifications</h1>' +
     '<p class="copy">A read-only queue of operational signals that need review across payments, fulfillment, invoices, catalog, accounts, and referrals.</p>' +
     '</div><div class="operator">Signed in as <strong>' + escapeHtml(email) + '</strong></div></section>' +
-    '<section id="notifications-root"><div class="loading">Loading notifications…</div></section>'
+    pushPanel() + '<section id="notifications-root"><div class="loading">Loading notifications…</div></section>'
 }
 
 export async function bindNotificationsPage(helpers: Helpers) {
+  void bindPushPanel()
   const root = document.querySelector<HTMLDivElement>('#notifications-root')
   if (!root) return
 
