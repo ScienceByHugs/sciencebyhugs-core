@@ -31,15 +31,16 @@ test('subscription API requires a real user and uses app_metadata for CORE acces
   assert.equal((await handleSubscription(req({ app:'nexus', action:'subscribe', subscription:{endpoint:'https://localhost'} },'valid'), admin, noopSql,'ecosystem','app_push_subscriptions',{})).status,400)
 })
 
-test('status and unsubscribe constrain both signed-in account and app', async () => {
-  const filters=[]
-  const query={select(){return this},eq(k,v){filters.push([k,v]);return this},maybeSingle:async()=>({data:null})}
-  const admin={auth:{getUser:async()=>({data:{user:{id:'u1'}}})},from:()=>query}
+test('status constrains both signed-in account and app in parameterized SQL', async () => {
+  const calls=[]
+  const sql=async (strings,...values)=>{calls.push({query:strings.join('?'),values});return []}
+  const admin={auth:{getUser:async()=>({data:{user:{id:'u1'}}})}}
   const {handleSubscription}=load(edgeFile,{})
   const req=new Request('https://project.test/',{method:'POST',headers:{Authorization:'Bearer valid'},body:JSON.stringify({app:'nexus',action:'status',subscription:{endpoint:'https://fcm.googleapis.com/abc'}})})
-  const response=await handleSubscription(req,admin,noopSql,'ecosystem','app_push_subscriptions',{})
+  const response=await handleSubscription(req,admin,sql,'ecosystem','app_push_subscriptions',{})
   assert.deepEqual(await response.json(),{enabled:false})
-  assert.deepEqual(filters,[['endpoint','https://fcm.googleapis.com/abc'],['user_id','u1'],['app','nexus']])
+  assert.deepEqual(calls[0].values,['https://fcm.googleapis.com/abc','u1','nexus'])
+  assert.match(calls[0].query,/user_id=.*app=/s)
 })
 
 test('expired device subscriptions are removed, transient failures are retryable', async () => {
