@@ -75,8 +75,25 @@ export type CoreDashboard = {
 }
 
 export async function loadCoreDashboard(): Promise<CoreDashboard> {
-  const { data, error } = await supabase.functions.invoke('core-dashboard', { body: {} })
-  if (error) throw error
-  if (!data?.success) throw new Error(data?.error || 'Could not load dashboard')
-  return data as CoreDashboard
+  for (let attempt = 0; ; attempt++) {
+    const { data, error } = await supabase.functions.invoke('core-dashboard', { body: {}, timeout: 15000 })
+    if (!error && data?.success) return data as CoreDashboard
+
+    let message = data?.error || 'Could not load dashboard. Please try again.'
+    let retryable = false
+    if (error) {
+      if (error.context instanceof Response) {
+        const status = error.context.status
+        let payload: { error?: string; retryable?: boolean } = {}
+        try { payload = await error.context.clone().json() } catch {}
+        message = payload.error || (status === 401 ? 'Your session expired. Please sign in again.'
+          : status === 403 ? 'Core administrator access is required.' : message)
+        retryable = [500, 502, 503, 504].includes(status) && payload.retryable !== false
+      } else {
+        retryable = error.name === 'FunctionsFetchError' || error.name === 'FunctionsRelayError'
+      }
+    }
+    if (!retryable || attempt >= 2) throw new Error(message)
+    await new Promise(resolve => setTimeout(resolve, attempt === 0 ? 750 : 1500))
+  }
 }
