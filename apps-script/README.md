@@ -2,7 +2,12 @@
 
 Create a separate standalone Google Apps Script project under the account that owns the Science By Hugs Invoice System spreadsheet. Paste `CoreCatalogBridge.gs` into the project.
 
-In Project Settings → Script Properties, add `SUPABASE_SECRET_KEY` with the same value used by the existing hourly catalog sync. Do not put the value in the script source or send it in chat.
+In Project Settings → Script Properties, configure:
+
+- `SUPABASE_SECRET_KEY`: the same value used by the existing hourly catalog sync.
+- `CATALOG_SPREADSHEET_ID`: the ID of the invoice-system spreadsheet that contains the Catalog and New Product List tabs.
+
+Keep both values out of committed script source. Do not send the secret key in chat. Existing deployed scripts are unaffected by this repository change; configure the spreadsheet property before deploying this version.
 
 Deploy → New deployment → Web app. Execute as yourself; access: Anyone. The script authenticates each POST using the server-held bridge key before reading or syncing the catalog. Authorize spreadsheet and external request access when Google prompts.
 
