@@ -46,8 +46,8 @@ jobs:
           VITE_BASE_PATH: /
         run: npm run build
 
-      - name: Push notification security tests
-        run: node --test tests/push.test.cjs
+      - name: Account and push notification tests
+        run: node --test tests/*.test.cjs
 
       - name: Verify built PWA
         run: node scripts/verify-production.mjs --dist
