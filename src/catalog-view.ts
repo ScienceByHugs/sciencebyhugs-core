@@ -97,7 +97,8 @@ export async function bindCatalogPage(helpers: Helpers) {
   const syncButton = document.querySelector<HTMLButtonElement>('#catalog-sync-now')
   const syncStatus = document.querySelector<HTMLSpanElement>('#catalog-sync-now-status')
 
-  syncButton?.addEventListener('click', async () => {
+  if (syncButton) syncButton.onclick = async () => {
+    if (syncButton.disabled) return
     syncButton.disabled = true
     syncButton.textContent = 'Syncing…'
     if (syncStatus) syncStatus.textContent = 'Reading the Google Sheet and updating Nexus catalog…'
@@ -113,10 +114,11 @@ export async function bindCatalogPage(helpers: Helpers) {
       await bindCatalogPage(helpers)
     } catch (error) {
       if (syncStatus) syncStatus.textContent = error instanceof Error ? error.message : 'Catalog sync failed.'
+    } finally {
       syncButton.disabled = false
       syncButton.textContent = 'Sync Catalog Now'
     }
-  })
+  }
 
   try {
     const payload = await loadCoreCatalog()
