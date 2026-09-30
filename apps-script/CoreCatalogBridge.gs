@@ -1,5 +1,4 @@
 // Deploy as a separate standalone Apps Script project; keep invoice scripts unchanged.
-const CATALOG_SPREADSHEET_ID = '1oU9T3wLObSiyzqpw69M2nABqmZ16_jJzWZ6adcNjxHE';
 const CATALOG_SYNC_URL = 'https://tkhcvmkejzaoervocnzk.supabase.co/functions/v1/sync-google-catalog';
 
 function doPost(e) {
@@ -19,7 +18,10 @@ function doPost(e) {
       return json({ success: false, error: 'Catalog sync is already running. Try again shortly.' });
     }
     try {
-      const ss = SpreadsheetApp.openById(CATALOG_SPREADSHEET_ID);
+      const spreadsheetId = PropertiesService.getScriptProperties()
+        .getProperty('CATALOG_SPREADSHEET_ID');
+      if (!spreadsheetId) throw new Error('CATALOG_SPREADSHEET_ID is not configured.');
+      const ss = SpreadsheetApp.openById(spreadsheetId);
       const catalog = ss.getSheetByName('Catalog');
       const sourcing = ss.getSheetByName('New Product List');
       if (!catalog || !sourcing) throw new Error('Catalog or New Product List sheet not found.');
