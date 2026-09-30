@@ -1,3 +1,4 @@
+import { avatarMarkup, bindAvatars } from './avatar'
 import { deliveryEstimateEditor, bindDeliveryEstimateEditors } from './delivery-estimate'
 import { disablePush, bindPushPanel } from './push'
 import { accountScreen, bindAccount, accountMutationInProgress } from './account-view'
@@ -207,7 +208,7 @@ function shell(content: string, signedIn = false) {
             <kbd>⌘K</kbd>
           </div>
           <div class="core-command-actions">
-            <a href="#account" class="core-command-icon core-account-shortcut" aria-label="Open account" title="Account"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="8" r="4"/><path d="M4 21v-2a8 8 0 0 1 16 0v2"/></svg></a>
+            <a href="#account" class="core-command-icon core-account-shortcut" aria-label="Open account" title="Account">${avatarMarkup()}</a>
             <a href="#notifications" class="core-command-icon" aria-label="Open alerts">!</a>
             <span class="core-command-state"><i aria-hidden="true"></i> Live</span>
           </div>
@@ -218,7 +219,7 @@ function shell(content: string, signedIn = false) {
             <span aria-hidden="true">☰</span><b>Menu</b>
           </button>
           <img class="core-mobile-logo" src="${coreLogoUrl}" alt="Core — Science By Hugs" />
-          <a href="#account" class="core-mobile-alert core-account-shortcut" aria-label="Open account" title="Account"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="8" r="4"/><path d="M4 21v-2a8 8 0 0 1 16 0v2"/></svg></a>
+          <a href="#account" class="core-mobile-alert core-account-shortcut" aria-label="Open account" title="Account">${avatarMarkup()}</a>
         </header>
 
         <main class="core-content-shell" id="core-content" tabindex="-1">${content}</main>
@@ -234,6 +235,7 @@ function shell(content: string, signedIn = false) {
     </div>
   `
 
+  void bindAvatars()
   const sidebar = document.querySelector<HTMLElement>('#core-sidebar')
   const toggle = document.querySelector<HTMLButtonElement>('#core-nav-toggle')
   const close = document.querySelector<HTMLButtonElement>('#core-nav-close')
