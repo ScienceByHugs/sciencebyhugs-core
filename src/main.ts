@@ -1,5 +1,6 @@
 import { deliveryEstimateEditor, bindDeliveryEstimateEditors } from './delivery-estimate'
-import { disablePush } from './push'
+import { disablePush, bindPushPanel } from './push'
+import { accountScreen, bindAccount, accountMutationInProgress } from './account-view'
 import './styles.css'
 import './brand.css'
 import { supabase } from './services/supabase'
@@ -26,6 +27,7 @@ import {
 const appRoot = document.querySelector<HTMLDivElement>('#app')
 if (!appRoot) throw new Error('App root not found')
 const app = appRoot
+let accountRecovery = false
 const coreLogoUrl = `${import.meta.env.BASE_URL}brand/core.svg`
 
 const money = (value: number | string | null | undefined) =>
@@ -63,6 +65,7 @@ type CoreView =
   | 'admin-tools'
   | 'notifications'
   | 'audit'
+  | 'account'
 
 const CORE_VIEWS: CoreView[] = [
   'dashboard',
@@ -76,6 +79,7 @@ const CORE_VIEWS: CoreView[] = [
   'admin-tools',
   'notifications',
   'audit',
+  'account',
 ]
 
 const LAST_CORE_VIEW_KEY = 'sciencebyhugs-core:last-view'
@@ -129,6 +133,7 @@ function shell(content: string, signedIn = false) {
     'admin-tools': '⚙',
     notifications: '!',
     audit: '≡',
+    account: '◎',
   }
 
   const navLink = (view: CoreView, label: string) =>
@@ -157,6 +162,7 @@ function shell(content: string, signedIn = false) {
         navLink('admin-tools', 'Admin') +
         navLink('notifications', 'Alerts') +
         navLink('audit', 'Audit Log') +
+        navLink('account', 'Account') +
       '</div>' +
       '</nav>'
     : ''
@@ -201,6 +207,7 @@ function shell(content: string, signedIn = false) {
             <kbd>⌘K</kbd>
           </div>
           <div class="core-command-actions">
+            <a href="#account" class="core-command-icon core-account-shortcut" aria-label="Open account" title="Account"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="8" r="4"/><path d="M4 21v-2a8 8 0 0 1 16 0v2"/></svg></a>
             <a href="#notifications" class="core-command-icon" aria-label="Open alerts">!</a>
             <span class="core-command-state"><i aria-hidden="true"></i> Live</span>
           </div>
@@ -211,7 +218,7 @@ function shell(content: string, signedIn = false) {
             <span aria-hidden="true">☰</span><b>Menu</b>
           </button>
           <img class="core-mobile-logo" src="${coreLogoUrl}" alt="Core — Science By Hugs" />
-          <a href="#notifications" class="core-mobile-alert" aria-label="Open alerts">!</a>
+          <a href="#account" class="core-mobile-alert core-account-shortcut" aria-label="Open account" title="Account"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="8" r="4"/><path d="M4 21v-2a8 8 0 0 1 16 0v2"/></svg></a>
         </header>
 
         <main class="core-content-shell" id="core-content" tabindex="-1">${content}</main>
@@ -245,7 +252,7 @@ function shell(content: string, signedIn = false) {
     ['orders', 'orders'], ['customers', 'customers'], ['catalog', 'catalog'],
     ['finance', 'finance'], ['payments', 'finance'], ['analytics', 'analytics'],
     ['referrals', 'referrals'], ['admin', 'admin-tools'], ['alerts', 'notifications'],
-    ['notifications', 'notifications'], ['audit', 'audit'],
+    ['notifications', 'notifications'], ['audit', 'audit'], ['account', 'account'], ['profile', 'account'],
   ]
 
   const jumpToSearch = () => {
@@ -274,10 +281,19 @@ function shell(content: string, signedIn = false) {
     link.addEventListener('click', () => setNavigationOpen(false)),
   )
 
-  document.querySelector('#sign-out')?.addEventListener('click', async () => {
-    try { await disablePush(); await supabase.auth.signOut() }
-    catch (error) { alert(error instanceof Error ? error.message : 'Could not sign out. Try again.') }
-  })
+  document.querySelectorAll<HTMLButtonElement>('#sign-out, #account-sign-out').forEach(button=>button.addEventListener('click', async () => {
+    button.disabled=true
+    try {
+      await disablePush()
+      const {error}=await supabase.auth.signOut()
+      if(error) throw error
+    } catch (error) {
+      const status=document.querySelector('#account-signout-status')
+      const message=error instanceof Error ? error.message : 'Could not sign out. Try again.'
+      if(status) status.textContent=message; else alert(message)
+      button.disabled=false
+    }
+  }))
 }
 
 function renderLogin(message = '') {
@@ -1052,8 +1068,15 @@ async function render() {
   }
 
   const email = user.email || 'Core operator'
-  const activeView = resolveCoreView()
+  const activeView = accountRecovery ? 'account' : resolveCoreView()
   keepCoreViewInUrl(activeView)
+
+  if (activeView === 'account') {
+    shell(accountScreen(email,accountRecovery),true)
+    await bindAccount(email,accountRecovery,()=>{accountRecovery=false;location.hash='dashboard'})
+    void bindPushPanel()
+    return
+  }
 
   if (activeView === 'operations') {
     await renderOperations(email)
@@ -1117,6 +1140,9 @@ async function render() {
 }
 
 supabase.auth.onAuthStateChange((event) => {
+  if(event === 'PASSWORD_RECOVERY'){accountRecovery=true;void render();return}
+  if(event === 'SIGNED_OUT') accountRecovery=false
+  if (accountMutationInProgress && event !== 'SIGNED_OUT') return
   if (event === 'SIGNED_IN' || event === 'SIGNED_OUT' || event === 'USER_UPDATED') {
     void render()
   }
