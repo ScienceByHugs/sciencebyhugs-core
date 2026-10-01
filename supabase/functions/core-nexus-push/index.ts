@@ -1,5 +1,6 @@
 import "jsr:@supabase/functions-js/edge-runtime.d.ts";
 import { createClient } from "npm:@supabase/supabase-js@2.117.1";
+import postgres from "npm:postgres@3.4.5";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -103,18 +104,26 @@ Deno.serve(async (req: Request) => {
     tag: "core-custom-" + eventKey,
   };
 
-  const rows = targets.map(target => ({
-    event_key: eventKey,
-    user_id: target.authUserId,
-    app: "nexus",
-    payload,
-  }));
-
-  const { error: queueError } = await admin
-    .schema("private")
-    .from("app_push_queue")
-    .insert(rows);
-  if (queueError) return json({ error: "Could not queue Nexus notifications" }, 500);
+  const sql = postgres(Deno.env.get("SUPABASE_DB_URL")!, {
+    prepare: false,
+    max: 1,
+    idle_timeout: 1,
+    connect_timeout: 10,
+  });
+  try {
+    for (const target of targets) {
+      await sql`
+        insert into private.app_push_queue(event_key,user_id,app,payload)
+        values (${eventKey}, ${target.authUserId}::uuid, 'nexus', ${sql.json(payload)})
+        on conflict do nothing
+      `;
+    }
+  } catch (error) {
+    console.error("Could not queue Nexus notifications", error);
+    return json({ error: "Could not queue Nexus notifications" }, 500);
+  } finally {
+    await sql.end({ timeout: 1 });
+  }
 
   const auditMetadata = {
     mode,
