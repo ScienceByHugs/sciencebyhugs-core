@@ -1,6 +1,6 @@
 import { avatarMarkup, bindAvatars } from './avatar'
 import { deliveryEstimateEditor, bindDeliveryEstimateEditors } from './delivery-estimate'
-import { disablePush, bindPushPanel } from './push'
+import { disablePush, bindPushPanel, pushPrompt } from './push'
 import { accountScreen, bindAccount, accountMutationInProgress } from './account-view'
 import './styles.css'
 import './brand.css'
@@ -186,6 +186,7 @@ function shell(content: string, signedIn = false) {
 
   app.innerHTML = `
     <a class="skip-link" href="#core-content">Skip to content</a>
+    ${pushPrompt()}
     <div class="core-app-shell">
       <aside class="core-sidebar" id="core-sidebar" aria-label="CORE workspace navigation">
         <div class="core-sidebar-brand">
@@ -235,6 +236,7 @@ function shell(content: string, signedIn = false) {
     </div>
   `
 
+  void bindPushPanel()
   void bindAvatars('', activeView === 'account')
   const sidebar = document.querySelector<HTMLElement>('#core-sidebar')
   const toggle = document.querySelector<HTMLButtonElement>('#core-nav-toggle')
@@ -1076,7 +1078,6 @@ async function render() {
   if (activeView === 'account') {
     shell(accountScreen(email,accountRecovery),true)
     await bindAccount(email,accountRecovery,()=>{accountRecovery=false;location.hash='dashboard'})
-    void bindPushPanel()
     return
   }
 
