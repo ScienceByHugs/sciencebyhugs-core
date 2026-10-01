@@ -1,4 +1,4 @@
-import { inviteCustomerProfile, loadAdminTools, saveMessageTemplate, type MessageTemplate } from './services/admin-tools'
+import { inviteCustomerProfile, loadAdminTools, saveMessageTemplate, sendCustomerActivationEmail, type MessageTemplate } from './services/admin-tools'
 
 type Helpers = {
   escapeHtml: (value: unknown) => string
@@ -31,21 +31,26 @@ export async function bindAdminToolsPage(helpers: Helpers) {
 
   const render = async () => {
     const data = await loadAdminTools()
+    const unclaimedIds = new Set(data.inviteable_profiles.map(profile => profile.id))
+
     root.innerHTML =
       '<div class="admin-columns">' +
-        '<section class="admin-panel"><div class="dashboard-section-head"><div><span class="eyebrow">ACCOUNT INVITES</span><h2>Unclaimed customer profiles</h2></div></div>' +
-          '<p class="admin-note">Invites are limited to existing active customer profiles that do not already have a Supabase Auth account.</p>' +
-          (data.inviteable_profiles.length
-            ? '<div class="admin-invite-list">' + data.inviteable_profiles.map(profile => {
+        '<section class="admin-panel"><div class="dashboard-section-head"><div><span class="eyebrow">ACCOUNT ACCESS</span><h2>Nexus invitations & activation</h2></div></div>' +
+          '<p class="admin-note">Send a first-time invitation to unclaimed profiles or resend an activation/password link to an existing Nexus account. Resends keep the customer on the same Auth account.</p>' +
+          (data.activation_profiles.length
+            ? '<div class="admin-invite-list">' + data.activation_profiles.map(profile => {
                 const name = [profile.first_name, profile.last_name].filter(Boolean).join(' ') || profile.email
-                return '<div class="admin-invite-row" data-customer-id="' + helpers.escapeHtml(profile.id) + '">' +
-                  '<span><strong>' + helpers.escapeHtml(name) + '</strong><small>' + helpers.escapeHtml(profile.customer_number || '') + '</small></span>' +
+                const isUnclaimed = unclaimedIds.has(profile.id)
+                const label = isUnclaimed ? 'Send Invite' : 'Resend Activation'
+                const status = isUnclaimed ? 'UNCLAIMED' : 'AUTH LINKED'
+                return '<div class="admin-invite-row" data-customer-id="' + helpers.escapeHtml(profile.id) + '" data-email="' + helpers.escapeHtml(profile.email) + '" data-unclaimed="' + (isUnclaimed ? 'true' : 'false') + '">' +
+                  '<span><strong>' + helpers.escapeHtml(name) + '</strong><small>' + helpers.escapeHtml(profile.customer_number || '') + ' · ' + status + '</small></span>' +
                   '<span>' + helpers.escapeHtml(profile.email) + '</span>' +
-                  '<button type="button" class="secondary send-customer-invite">Send Invite</button>' +
+                  '<button type="button" class="secondary send-customer-activation">' + label + '</button>' +
                   '<p class="card-message admin-invite-message"></p>' +
                 '</div>'
               }).join('') + '</div>'
-            : '<p class="dashboard-muted">No active unclaimed customer profiles.</p>') +
+            : '<p class="dashboard-muted">No active customer profiles.</p>') +
         '</section>' +
 
         '<section class="admin-panel"><div class="dashboard-section-head"><div><span class="eyebrow">QUICK RESPONSE</span><h2>New canned response</h2></div></div>' +
@@ -64,24 +69,32 @@ export async function bindAdminToolsPage(helpers: Helpers) {
           : '<p class="dashboard-muted">No message templates yet.</p>') +
       '</section>'
 
-    document.querySelectorAll<HTMLButtonElement>('.send-customer-invite').forEach(button => {
+    document.querySelectorAll<HTMLButtonElement>('.send-customer-activation').forEach(button => {
       button.addEventListener('click', async () => {
         const row = button.closest<HTMLElement>('.admin-invite-row')
         const customerId = row?.dataset.customerId
+        const email = row?.dataset.email || ''
+        const isUnclaimed = row?.dataset.unclaimed === 'true'
         const message = row?.querySelector<HTMLParagraphElement>('.admin-invite-message')
-        const email = row?.querySelectorAll('span')[1]?.textContent || ''
-        if (!customerId) return
+        if (!customerId || !email) return
 
-        if (!window.confirm('Send a Science By HUGs account invitation to ' + email + '?\n\nThis sends a real authentication email.')) return
+        const verb = isUnclaimed ? 'Send a Science By HUGs account invitation' : 'Send a fresh Nexus activation/password link'
+        if (!window.confirm(verb + ' to ' + email + '?\n\nThis sends a real authentication email.')) return
 
         button.disabled = true
-        if (message) message.textContent = 'Sending invite…'
+        if (message) message.textContent = isUnclaimed ? 'Sending invite…' : 'Sending activation link…'
         try {
-          await inviteCustomerProfile(customerId)
-          if (message) message.textContent = 'Invite sent and audit events recorded.'
+          if (isUnclaimed) {
+            await inviteCustomerProfile(customerId)
+          } else {
+            await sendCustomerActivationEmail(email)
+          }
+          if (message) message.textContent = isUnclaimed
+            ? 'Invite sent.'
+            : 'Fresh activation/password link sent.'
           await render()
         } catch (error) {
-          if (message) message.textContent = error instanceof Error ? error.message : 'Could not send invite.'
+          if (message) message.textContent = error instanceof Error ? error.message : 'Could not send account email.'
         } finally {
           button.disabled = false
         }
