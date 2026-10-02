@@ -1996,3 +1996,80 @@ body{
   .nexus-push-actions{align-items:stretch;flex-direction:column}
   .nexus-push-actions button{width:100%}
 }
+
+
+/* Collapsible Operations work queue */
+.operations-controls-bar{
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+  gap:12px;
+  margin-bottom:12px;
+}
+.operations-controls-label{
+  display:flex;
+  align-items:baseline;
+  gap:10px;
+  min-width:0;
+}
+.operations-controls-label strong{
+  color:var(--text);
+  font-size:.9rem;
+  white-space:nowrap;
+  overflow:hidden;
+  text-overflow:ellipsis;
+}
+.operations-controls-toggle{
+  min-height:40px;
+  min-width:92px;
+  padding:8px 13px;
+  border-radius:12px;
+  gap:8px;
+  background:rgba(11,15,20,.88);
+  color:var(--text);
+  border:1px solid color-mix(in srgb,var(--secondary) 30%,#233044);
+  font-size:.76rem;
+  font-weight:850;
+}
+.operations-controls-toggle-icon{
+  color:var(--secondary);
+  font-size:1.05rem;
+  line-height:1;
+}
+.operations-controls.collapsed{
+  padding-bottom:11px;
+}
+.operations-controls.collapsed .operations-controls-bar{
+  margin-bottom:0;
+}
+.operations-controls-body[hidden]{
+  display:none!important;
+}
+
+@media(max-width:760px){
+  .operations-controls{
+    padding:10px 11px;
+  }
+  .operations-controls-bar{
+    margin-bottom:10px;
+  }
+  .operations-controls-label{
+    gap:8px;
+  }
+  .operations-controls-label .eyebrow{
+    font-size:.66rem;
+  }
+  .operations-controls-label strong{
+    font-size:.82rem;
+  }
+  .operations-controls-toggle{
+    min-width:76px;
+    min-height:38px;
+    padding:7px 10px;
+  }
+  .operations-controls.collapsed{
+    padding:9px 11px;
+    border-color:color-mix(in srgb,var(--secondary) 28%,#2d291f);
+    box-shadow:0 8px 28px rgba(0,0,0,.24);
+  }
+}
