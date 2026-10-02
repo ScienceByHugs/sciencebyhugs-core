@@ -657,30 +657,80 @@ async function renderOperations(email: string) {
       <div class="operator">Signed in as <strong>${escapeHtml(email)}</strong></div>
     </section>
     <section class="stats operations-stats" id="stats"></section>
-    <section class="operations-controls" aria-label="Operations queue controls">
-      <div class="operations-controls-top">
-        <div>
+    <section class="operations-controls" id="operations-controls" aria-label="Operations queue controls">
+      <div class="operations-controls-bar">
+        <div class="operations-controls-label">
           <span class="eyebrow">WORK QUEUE</span>
-          <h2>What do you need to work?</h2>
+          <strong id="operations-current-queue">${activeQueue === 'attention' ? 'Priority' : activeQueue === 'approval' ? 'Invoices' : activeQueue === 'payment' ? 'Payments' : activeQueue === 'fulfillment' ? 'Fulfillment' : 'All activity'}</strong>
         </div>
-        <label class="queue-search operations-search">
-          <span class="sr-only">Search operations</span>
-          <input id="queue-search" type="search" placeholder="Search customer, invoice, order…" autocomplete="off">
-        </label>
+        <button class="operations-controls-toggle" id="operations-controls-toggle" type="button" aria-expanded="true" aria-controls="operations-controls-body">
+          <span class="operations-controls-toggle-icon" aria-hidden="true">☰</span>
+          <span class="operations-controls-toggle-text">Hide</span>
+        </button>
       </div>
-      <div class="queue-tabs operations-tabs" id="queue-tabs">
-        <button class="queue-tab ${activeQueue === 'attention' ? 'active' : ''}" type="button" data-queue="attention">Priority</button>
-        <button class="queue-tab ${activeQueue === 'approval' ? 'active' : ''}" type="button" data-queue="approval">Invoices</button>
-        <button class="queue-tab ${activeQueue === 'payment' ? 'active' : ''}" type="button" data-queue="payment">Payments</button>
-        <button class="queue-tab ${activeQueue === 'fulfillment' ? 'active' : ''}" type="button" data-queue="fulfillment">Fulfillment</button>
-        <button class="queue-tab ${activeQueue === 'all' ? 'active' : ''}" type="button" data-queue="all">All activity</button>
+      <div class="operations-controls-body" id="operations-controls-body">
+        <div class="operations-controls-top">
+          <div>
+            <h2>What do you need to work?</h2>
+          </div>
+          <label class="queue-search operations-search">
+            <span class="sr-only">Search operations</span>
+            <input id="queue-search" type="search" placeholder="Search customer, invoice, order…" autocomplete="off">
+          </label>
+        </div>
+        <div class="queue-tabs operations-tabs" id="queue-tabs">
+          <button class="queue-tab ${activeQueue === 'attention' ? 'active' : ''}" type="button" data-queue="attention">Priority</button>
+          <button class="queue-tab ${activeQueue === 'approval' ? 'active' : ''}" type="button" data-queue="approval">Invoices</button>
+          <button class="queue-tab ${activeQueue === 'payment' ? 'active' : ''}" type="button" data-queue="payment">Payments</button>
+          <button class="queue-tab ${activeQueue === 'fulfillment' ? 'active' : ''}" type="button" data-queue="fulfillment">Fulfillment</button>
+          <button class="queue-tab ${activeQueue === 'all' ? 'active' : ''}" type="button" data-queue="all">All activity</button>
+        </div>
+        <p class="queue-summary" id="queue-summary" aria-live="polite"></p>
       </div>
-      <p class="queue-summary" id="queue-summary" aria-live="polite"></p>
     </section>
     <section class="invoice-list" id="invoice-list">
       <div class="loading">Loading operations…</div>
     </section>
   `, true)
+
+  const controls = document.querySelector<HTMLElement>('#operations-controls')
+  const controlsBody = document.querySelector<HTMLElement>('#operations-controls-body')
+  const controlsToggle = document.querySelector<HTMLButtonElement>('#operations-controls-toggle')
+  const controlsToggleText = controlsToggle?.querySelector<HTMLElement>('.operations-controls-toggle-text')
+  const currentQueueLabel = document.querySelector<HTMLElement>('#operations-current-queue')
+  const controlsStorageKey = 'sciencebyhugs-core:operations-controls-collapsed'
+
+  const queueDisplayLabel = (queue: OperationsQueue) =>
+    queue === 'attention' ? 'Priority' :
+    queue === 'approval' ? 'Invoices' :
+    queue === 'payment' ? 'Payments' :
+    queue === 'fulfillment' ? 'Fulfillment' :
+    'All activity'
+
+  const setControlsCollapsed = (collapsed: boolean) => {
+    controls?.classList.toggle('collapsed', collapsed)
+    if (controlsBody) controlsBody.hidden = collapsed
+    controlsToggle?.setAttribute('aria-expanded', String(!collapsed))
+    if (controlsToggleText) controlsToggleText.textContent = collapsed ? 'Show' : 'Hide'
+    try {
+      sessionStorage.setItem(controlsStorageKey, collapsed ? '1' : '0')
+    } catch {
+      // Collapsing the queue controls remains functional even without storage.
+    }
+  }
+
+  let controlsCollapsed = window.matchMedia('(max-width: 760px)').matches
+  try {
+    const storedControlsState = sessionStorage.getItem(controlsStorageKey)
+    if (storedControlsState !== null) controlsCollapsed = storedControlsState === '1'
+  } catch {
+    // Use the responsive default if storage is unavailable.
+  }
+
+  setControlsCollapsed(controlsCollapsed)
+  controlsToggle?.addEventListener('click', () => {
+    setControlsCollapsed(!controls?.classList.contains('collapsed'))
+  })
 
   try {
     const invoices = await listCoreInvoices()
@@ -815,6 +865,7 @@ async function renderOperations(email: string) {
         rememberOperationsQueue(activeQueue)
         document.querySelectorAll('.queue-tab').forEach(tab => tab.classList.remove('active'))
         button.classList.add('active')
+        if (currentQueueLabel) currentQueueLabel.textContent = queueDisplayLabel(activeQueue)
         applyQueueView()
       })
     })
