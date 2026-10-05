@@ -2097,3 +2097,43 @@ body{
   .generated-discount-code{grid-template-columns:1fr auto}
   .generated-discount-code>span{grid-column:1/-1}
 }
+
+/* Checkout pending admin queue */
+.pending-checkout-toolbar{
+  display:flex;align-items:center;justify-content:space-between;gap:14px;
+  margin:0 0 16px;padding:14px 16px;border:1px solid #233044;border-radius:16px;
+  background:rgba(0,0,0,.18)
+}
+.pending-checkout-toolbar>div{display:grid;gap:4px}
+.pending-checkout-toolbar strong{font-size:.9rem}
+.pending-checkout-toolbar span{color:var(--muted);font-size:.72rem}
+.pending-checkout-list{display:grid;gap:14px}
+.pending-checkout-card{
+  padding:20px;border:1px solid color-mix(in srgb,#d8a55f 42%,#233044);
+  border-radius:20px;background:rgba(0,0,0,.2)
+}
+.pending-checkout-head{display:flex;justify-content:space-between;gap:16px;align-items:flex-start}
+.pending-checkout-head h2{margin:6px 0 4px;font-size:1.15rem}
+.pending-checkout-head p{margin:0;color:var(--muted);font-size:.8rem}
+.pending-checkout-grid{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:9px;margin:16px 0}
+.pending-checkout-grid>div{padding:12px;border:1px solid #233044;border-radius:12px;background:rgba(0,0,0,.18)}
+.pending-checkout-grid span{display:block;color:var(--muted);font-size:.64rem;text-transform:uppercase;letter-spacing:.06em}
+.pending-checkout-grid strong{display:block;margin-top:5px;font-size:.82rem;overflow-wrap:anywhere}
+.pending-checkout-actions{display:flex;align-items:center;gap:12px;justify-content:flex-end}
+.pending-checkout-actions .card-message{margin:0 auto 0 0}
+button.danger,.danger{
+  border:1px solid rgba(225,138,138,.4);background:rgba(120,25,25,.16);color:#f3b1b1;
+  border-radius:12px;padding:10px 14px;font:inherit;font-size:.76rem;font-weight:850;cursor:pointer
+}
+button.danger:hover,.danger:hover{border-color:rgba(225,138,138,.68);background:rgba(120,25,25,.24)}
+button.danger:disabled,.danger:disabled{opacity:.5;cursor:not-allowed}
+@media(max-width:900px){.pending-checkout-grid{grid-template-columns:repeat(2,1fr)}}
+@media(max-width:700px){
+  .pending-checkout-toolbar{align-items:stretch;flex-direction:column}
+  .pending-checkout-toolbar .danger{width:100%}
+  .pending-checkout-head{display:block}
+  .pending-checkout-head .payment-badge{display:inline-block;margin-top:10px}
+  .pending-checkout-grid{grid-template-columns:1fr}
+  .pending-checkout-actions{align-items:stretch;flex-direction:column}
+  .pending-checkout-actions .danger{width:100%}
+}
