@@ -98,3 +98,35 @@ export async function sendCustomerActivationEmail(email: string) {
   if (error) throw error
   return { success: true as const, email: normalizedEmail }
 }
+
+
+export type DiscountCodeRecord = {
+  id: string
+  code: string
+  kind: 'free_shipping' | 'referral_bonus' | 'new_customer' | 'group_buy'
+  discount_percent: number | null
+  shipping_discount: number | null
+  one_time: boolean
+  permanent: boolean
+  active: boolean
+  created_at: string
+  used_at: string | null
+}
+
+export async function loadDiscountCodes(): Promise<DiscountCodeRecord[]> {
+  const { data, error } = await supabase.functions.invoke('core-discount-codes', {
+    body: { action: 'list' },
+  })
+  if (error) throw error
+  if (!data?.success) throw new Error(data?.error || 'Could not load discount codes')
+  return data.codes || []
+}
+
+export async function generateDiscountCode(kind: 'free_shipping' | 'referral_bonus') {
+  const { data, error } = await supabase.functions.invoke('core-discount-codes', {
+    body: { action: 'generate', kind },
+  })
+  if (error) throw error
+  if (!data?.success || !data?.code) throw new Error(data?.error || 'Could not generate discount code')
+  return data as { success: true; code: DiscountCodeRecord; codes: DiscountCodeRecord[] }
+}
