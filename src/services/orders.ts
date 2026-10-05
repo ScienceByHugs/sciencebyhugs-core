@@ -98,3 +98,13 @@ export async function updateEstimatedDelivery(orderId: string, estimatedDelivery
   if (!data?.success) throw new Error(data?.error || 'Could not save estimated delivery date')
   return data as { success: true; order: { id: string; estimated_delivery_date: string | null; updated_at: string } }
 }
+
+
+export async function clearCheckoutPending(orderId?: string) {
+  const { data, error } = await supabase.functions.invoke('core-orders', {
+    body: { action: 'clear_checkout_pending', orderId: orderId || null },
+  })
+  if (error) throw error
+  if (!data?.success) throw new Error(data?.error || 'Could not clear pending checkout')
+  return data as { success: true; deleted: number; orderIds: string[] }
+}
