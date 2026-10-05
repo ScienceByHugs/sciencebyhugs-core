@@ -6,6 +6,7 @@ import './styles.css'
 import './brand.css'
 import { supabase } from './services/supabase'
 import { bindOrdersPage, ordersPageMarkup } from './orders-view'
+import { bindCheckoutPendingPage, checkoutPendingPageMarkup } from './checkout-pending-view'
 import { bindCustomersPage, customersPageMarkup } from './customers-view'
 import { bindCatalogPage, catalogPageMarkup } from './catalog-view'
 import { bindDashboardPage, dashboardPageMarkup } from './dashboard-view'
@@ -58,6 +59,7 @@ type CoreView =
   | 'dashboard'
   | 'operations'
   | 'orders'
+  | 'checkout-pending'
   | 'customers'
   | 'catalog'
   | 'analytics'
@@ -72,6 +74,7 @@ const CORE_VIEWS: CoreView[] = [
   'dashboard',
   'operations',
   'orders',
+  'checkout-pending',
   'customers',
   'catalog',
   'analytics',
@@ -126,6 +129,7 @@ function shell(content: string, signedIn = false) {
     dashboard: '⌂',
     operations: '▤',
     orders: '▱',
+    'checkout-pending': '⌛',
     customers: '◎',
     catalog: '◇',
     analytics: '↗',
@@ -150,6 +154,7 @@ function shell(content: string, signedIn = false) {
       '</div>' +
       '<div class="core-nav-group"><span class="core-nav-label">OPERATIONS</span>' +
         navLink('orders', 'Orders') +
+        navLink('checkout-pending', 'Checkout Pending') +
         navLink('operations', 'Fulfillment') +
         navLink('finance', 'Payments') +
       '</div>' +
@@ -253,7 +258,8 @@ function shell(content: string, signedIn = false) {
 
   const sectionMap: Array<[string, CoreView]> = [
     ['dashboard', 'dashboard'], ['operations', 'operations'], ['fulfillment', 'operations'],
-    ['orders', 'orders'], ['customers', 'customers'], ['catalog', 'catalog'],
+    ['orders', 'orders'], ['checkout pending', 'checkout-pending'], ['pending checkout', 'checkout-pending'],
+    ['customers', 'customers'], ['catalog', 'catalog'],
     ['finance', 'finance'], ['payments', 'finance'], ['analytics', 'analytics'],
     ['referrals', 'referrals'], ['admin', 'admin-tools'], ['alerts', 'notifications'],
     ['notifications', 'notifications'], ['audit', 'audit'], ['account', 'account'], ['profile', 'account'],
@@ -1051,6 +1057,11 @@ async function renderOrders(email: string) {
   await bindOrdersPage({ escapeHtml, money, dateTime })
 }
 
+async function renderCheckoutPending(email: string) {
+  shell(checkoutPendingPageMarkup(email, escapeHtml), true)
+  await bindCheckoutPendingPage({ escapeHtml, money, dateTime })
+}
+
 async function renderCustomers(email: string) {
   shell(customersPageMarkup(email, escapeHtml), true)
   await bindCustomersPage({ escapeHtml, money, dateTime })
@@ -1139,6 +1150,11 @@ async function render() {
 
   if (activeView === 'orders') {
     await renderOrders(email)
+    return
+  }
+
+  if (activeView === 'checkout-pending') {
+    await renderCheckoutPending(email)
     return
   }
 
