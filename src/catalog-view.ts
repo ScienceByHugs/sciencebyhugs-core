@@ -1,5 +1,38 @@
 import { deleteCatalogProduct, loadCoreCatalog, setCatalogVisibility, syncCatalogNow, updateCatalogMetadata, type CoreCatalogProduct } from './services/catalog'
 
+const CATALOG_VIEW_STATE_KEY = 'sciencebyhugs-core:catalog-view-state'
+
+type CatalogViewState = {
+  search: string
+  category: string
+  state: string
+}
+
+function loadCatalogViewState(): CatalogViewState {
+  try {
+    const raw = sessionStorage.getItem(CATALOG_VIEW_STATE_KEY)
+    if (raw) {
+      const parsed = JSON.parse(raw) as Partial<CatalogViewState>
+      return {
+        search: typeof parsed.search === 'string' ? parsed.search : '',
+        category: typeof parsed.category === 'string' ? parsed.category : 'all',
+        state: typeof parsed.state === 'string' ? parsed.state : 'all',
+      }
+    }
+  } catch {
+    // Fall back to defaults if session storage is unavailable.
+  }
+  return { search: '', category: 'all', state: 'all' }
+}
+
+function saveCatalogViewState(value: CatalogViewState) {
+  try {
+    sessionStorage.setItem(CATALOG_VIEW_STATE_KEY, JSON.stringify(value))
+  } catch {
+    // The current view still works even if storage is unavailable.
+  }
+}
+
 type Helpers = {
   escapeHtml: (value: unknown) => string
   money: (value: number | string | null | undefined) => string
@@ -255,9 +288,27 @@ export async function bindCatalogPage(helpers: Helpers) {
       ).join(''))
     }
 
-    let search = ''
-    let category = 'all'
-    let state = 'all'
+    const savedViewState = loadCatalogViewState()
+    let search = savedViewState.search
+    let category = savedViewState.category
+    let state = savedViewState.state
+
+    const searchInput = document.querySelector<HTMLInputElement>('#catalog-search')
+    const stateSelect = document.querySelector<HTMLSelectElement>('#catalog-state')
+
+    if (searchInput) searchInput.value = search
+    if (categorySelect && Array.from(categorySelect.options).some(option => option.value === category)) {
+      categorySelect.value = category
+    } else {
+      category = 'all'
+      if (categorySelect) categorySelect.value = 'all'
+    }
+    if (stateSelect && Array.from(stateSelect.options).some(option => option.value === state)) {
+      stateSelect.value = state
+    } else {
+      state = 'all'
+      if (stateSelect) stateSelect.value = 'all'
+    }
     const metadataQueueIds = new Set(operations.action_queue.map(item => item.product_id))
     const discrepancyIds = new Set(operations.discrepancies.map(item => item.product_id))
 
@@ -417,6 +468,7 @@ export async function bindCatalogPage(helpers: Helpers) {
         state = button.dataset.opsFilter || 'all'
         const stateSelect = document.querySelector<HTMLSelectElement>('#catalog-state')
         if (stateSelect) stateSelect.value = state
+        saveCatalogViewState({ search, category, state })
         apply()
         document.querySelector('#catalog-list')?.scrollIntoView({ behavior: 'smooth', block: 'start' })
       })
@@ -436,6 +488,7 @@ export async function bindCatalogPage(helpers: Helpers) {
         if (searchInput) searchInput.value = ''
         if (categoryInput) categoryInput.value = 'all'
         if (stateInput) stateInput.value = 'all'
+        saveCatalogViewState({ search, category, state })
         apply()
 
         const card = document.querySelector<HTMLElement>('.catalog-card[data-product-id="' + productId + '"]')
@@ -450,14 +503,17 @@ export async function bindCatalogPage(helpers: Helpers) {
 
     document.querySelector<HTMLInputElement>('#catalog-search')?.addEventListener('input', event => {
       search = (event.currentTarget as HTMLInputElement).value.trim().toLowerCase()
+      saveCatalogViewState({ search, category, state })
       apply()
     })
     categorySelect?.addEventListener('change', event => {
       category = (event.currentTarget as HTMLSelectElement).value
+      saveCatalogViewState({ search, category, state })
       apply()
     })
     document.querySelector<HTMLSelectElement>('#catalog-state')?.addEventListener('change', event => {
       state = (event.currentTarget as HTMLSelectElement).value
+      saveCatalogViewState({ search, category, state })
       apply()
     })
     apply()
