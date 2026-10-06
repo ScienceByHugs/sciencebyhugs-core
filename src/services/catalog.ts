@@ -195,6 +195,20 @@ export async function setCatalogVisibility(productId: string, hidden: boolean) {
   })
 
   if (error) throw error
-  if (!data?.success) throw new Error(data?.error || 'Could not update storefront visibility')
+  if (!data?.success) throw new Error(data?.error || 'Could not update tier visibility')
   return data.product as Pick<CoreCatalogProduct, 'id' | 'name' | 'core_hidden' | 'active' | 'storefront_status' | 'updated_at'>
+}
+
+
+export async function deleteCatalogProduct(productId: string) {
+  const { data, error } = await supabase.functions.invoke('core-catalog-control', {
+    body: {
+      action: 'delete_product',
+      productId,
+    },
+  })
+
+  if (error) throw error
+  if (!data?.success) throw new Error(data?.error || 'Could not delete catalog product')
+  return data as { success: true; deletedId: string; deletedName: string }
 }

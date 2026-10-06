@@ -1,4 +1,4 @@
-import { loadCoreCatalog, setCatalogVisibility, syncCatalogNow, updateCatalogMetadata, type CoreCatalogProduct } from './services/catalog'
+import { deleteCatalogProduct, loadCoreCatalog, setCatalogVisibility, syncCatalogNow, updateCatalogMetadata, type CoreCatalogProduct } from './services/catalog'
 
 type Helpers = {
   escapeHtml: (value: unknown) => string
@@ -18,7 +18,7 @@ function productCard(product: CoreCatalogProduct, helpers: Helpers) {
         escapeHtml(product.category?.name || 'No category') + '</p></div>' +
       '<div class="catalog-tags">' +
         '<span class="catalog-status ' + (product.active ? 'active' : 'inactive') + '">' + (product.active ? 'Active' : 'Inactive') + '</span>' +
-        (product.core_hidden ? '<span class="catalog-status inactive">Hidden from Nexus</span>' : '') +
+        (product.core_hidden ? '<span class="catalog-status inactive">Hidden from Resident/New</span>' : '') +
         '<span class="catalog-storefront">' + escapeHtml(product.storefront_status || 'No storefront status') + '</span>' +
       '</div>' +
     '</div>' +
@@ -39,8 +39,11 @@ function productCard(product: CoreCatalogProduct, helpers: Helpers) {
         ? '<a class="button secondary" href="' + escapeHtml(product.coa_url) + '" target="_blank" rel="noreferrer">Open COA</a>'
         : '') +
       '<button class="secondary toggle-catalog-visibility" type="button">' +
-        (product.core_hidden ? 'Enable on Nexus' : 'Disable on Nexus') +
+        (product.core_hidden ? 'Unhide from Resident/New' : 'Hide from Resident/New') +
       '</button>' +
+      '<button class="danger delete-catalog-product" type="button"' +
+        (product.active || String(product.storefront_status || '').toLowerCase() === 'available' ? ' disabled title="Active vendor products must be hidden, not deleted."' : '') +
+      '>Delete Product</button>' +
       '<span class="card-message catalog-visibility-message" aria-live="polite"></span>' +
     '</div>' +
     '<details class="catalog-editor"><summary>Edit Core metadata overlay</summary>' +
@@ -130,7 +133,7 @@ export async function bindCatalogPage(helpers: Helpers) {
         '<div><span>Total</span><strong>' + metrics.total + '</strong></div>' +
         '<div><span>Active</span><strong>' + metrics.active + '</strong></div>' +
         '<div><span>Available on Nexus</span><strong>' + metrics.available + '</strong></div>' +
-        '<div><span>Hidden by Core</span><strong>' + metrics.hidden + '</strong></div>' +
+        '<div><span>Hidden from Resident/New</span><strong>' + metrics.hidden + '</strong></div>' +
         '<div><span>Metadata complete</span><strong>' + metrics.metadata_complete + '/' + metrics.active + '</strong></div>' +
         '<div><span>Completeness</span><strong>' + metrics.metadata_completeness_percent + '%</strong></div>' +
         '<div><span>Work queue</span><strong>' + metrics.action_queue + '</strong></div>' +
@@ -301,23 +304,59 @@ export async function bindCatalogPage(helpers: Helpers) {
         button.disabled = true
         button.textContent = nextHidden ? 'Disabling…' : 'Enabling…'
         if (message) message.textContent = nextHidden
-          ? 'Hiding product from Nexus…'
-          : 'Restoring product to Nexus…'
+          ? 'Hiding product from Resident Scientist and New Researcher…'
+          : 'Restoring product for all eligible membership tiers…'
 
         try {
           const updated = await setCatalogVisibility(productId, nextHidden)
           product.core_hidden = updated.core_hidden
           product.updated_at = updated.updated_at
           if (message) message.textContent = updated.core_hidden
-            ? 'Disabled on Nexus. Audit event recorded.'
-            : 'Enabled on Nexus. Audit event recorded.'
+            ? 'Hidden from Resident Scientist and New Researcher. Audit event recorded.'
+            : 'Visible to eligible membership tiers again. Audit event recorded.'
           await bindCatalogPage(helpers)
         } catch (error) {
           if (message) message.textContent = error instanceof Error
             ? error.message
             : 'Could not update storefront visibility.'
           button.disabled = false
-          button.textContent = product.core_hidden ? 'Enable on Nexus' : 'Disable on Nexus'
+          button.textContent = product.core_hidden ? 'Unhide from Resident/New' : 'Hide from Resident/New'
+        }
+      })
+    })
+
+    document.querySelectorAll<HTMLButtonElement>('.delete-catalog-product').forEach(button => {
+      button.addEventListener('click', async () => {
+        const card = button.closest<HTMLElement>('.catalog-card')
+        const productId = card?.dataset.productId
+        const message = card?.querySelector<HTMLSpanElement>('.catalog-visibility-message')
+        if (!productId) return
+
+        const product = products.find(item => item.id === productId)
+        if (!product) return
+
+        if (product.active || String(product.storefront_status || '').toLowerCase() === 'available') {
+          if (message) message.textContent = 'This product is still on the active vendor catalog. Hide it instead.'
+          return
+        }
+
+        const confirmed = window.confirm(
+          'Delete "' + product.name + '" from CORE/NEXUS?\n\nThis is intended only for products no longer present on the vendor catalog. Historical order line items will keep their product name and price.'
+        )
+        if (!confirmed) return
+
+        button.disabled = true
+        button.textContent = 'Deleting…'
+        if (message) message.textContent = 'Removing product from CORE/NEXUS…'
+
+        try {
+          const deleted = await deleteCatalogProduct(productId)
+          if (message) message.textContent = deleted.deletedName + ' deleted. Audit event recorded.'
+          await bindCatalogPage(helpers)
+        } catch (error) {
+          if (message) message.textContent = error instanceof Error ? error.message : 'Could not delete product.'
+          button.disabled = false
+          button.textContent = 'Delete Product'
         }
       })
     })
